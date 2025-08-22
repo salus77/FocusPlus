@@ -23,6 +23,13 @@ class TimerViewModel: ObservableObject {
     @Published var selectedCalendarMonth: Date = Date()
     @Published var currentTaskName: String = ""
     @Published var currentTaskEstimatedMinutes: Int = 0
+    @Published var currentTaskCategoryColor: Color = DesignSystem.Colors.neonBlue
+    
+    // Completion animation callback
+    var onCompletionAnimationFinished: (() -> Void) = {}
+    
+    // Category statistics
+    @Published var categoryStatistics: [String: Int] = [:]
     
     // Settings
     @Published var soundEnabled: Bool = true {
@@ -97,13 +104,42 @@ class TimerViewModel: ObservableObject {
     }
 
     func skip() {
-        if phase == .focus {
-            completeFocusSession()
-        } else {
-            completeBreakSession()
-        }
+        // 現在のタイマーを停止
+        timer?.invalidate()
+        timer = nil
+        
         if hapticsEnabled {
             HapticsManager.shared.lightImpact()
+        }
+        
+        if phase == .focus {
+            // フォーカスセッションを完了して、次のブレイクセッションをセット
+            completedCountToday += 1
+            saveCompletedCount()
+            saveHourlyCompletedCount() // 時間ごとのデータを保存
+            
+            // 音の再生
+            if soundEnabled {
+                SoundManager.shared.playChime()
+            }
+            
+            // 次のブレイクセッションをセットして停止状態にする
+            phase = .break_
+            timeRemaining = breakDuration * 60
+            totalTime = timeRemaining
+            state = .idle
+        } else {
+            // ブレイクセッションを完了して、次のフォーカスセッションをセット
+            // 音の再生
+            if soundEnabled {
+                SoundManager.shared.playChime()
+            }
+            
+            // 次のフォーカスセッションをセットして停止状態にする
+            phase = .focus
+            timeRemaining = focusDuration * 60
+            totalTime = timeRemaining
+            state = .idle
         }
     }
 
@@ -119,33 +155,45 @@ class TimerViewModel: ObservableObject {
         completedCountToday += 1
         saveCompletedCount()
         saveHourlyCompletedCount() // 時間ごとのデータを保存
-        phase = .break_
-        timeRemaining = breakDuration * 60
-        totalTime = timeRemaining
-        state = .idle
         
         // 音の再生
         if soundEnabled {
             SoundManager.shared.playChime()
+        }
+        
+        // 点滅アニメーション完了後に状態をリセット
+        // この処理はCircularDialViewのアニメーション完了後に実行される
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            self.phase = .break_
+            self.timeRemaining = self.breakDuration * 60
+            self.totalTime = self.timeRemaining
+            self.state = .idle
         }
     }
 
     private func completeBreakSession() {
-        phase = .focus
-        timeRemaining = focusDuration * 60
-        totalTime = timeRemaining
-        state = .idle
-        
         // 音の再生
         if soundEnabled {
             SoundManager.shared.playChime()
         }
+        
+        // 点滅アニメーション完了後に状態をリセット
+        // この処理はCircularDialViewのアニメーション完了後に実行される
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self else { return }
+            self.phase = .focus
+            self.timeRemaining = self.focusDuration * 60
+            self.totalTime = self.timeRemaining
+            self.state = .idle
+        }
     }
 
     // MARK: - Task Management
-    func setCurrentTask(_ task: TaskItem) {
-        currentTaskName = task.name
-        currentTaskEstimatedMinutes = task.estimatedMinutes
+    func setCurrentTask(name: String, estimatedMinutes: Int, categoryColor: Color) {
+        currentTaskName = name
+        currentTaskEstimatedMinutes = estimatedMinutes
+        currentTaskCategoryColor = categoryColor
         saveCurrentTask()
     }
 
@@ -179,6 +227,24 @@ class TimerViewModel: ObservableObject {
         return data
     }
     
+    // 選択された日付の時間ごとの完了色情報を取得
+    func hourlyCompletedColors(for date: Date) -> [Color] {
+        let key = hourlyColorKey(for: date)
+        let colorData = userDefaults.array(forKey: key) as? [[CGFloat]] ?? Array(repeating: [], count: 24)
+        
+        return colorData.map { components in
+            if components.count >= 3 {
+                return Color(.sRGB, 
+                           red: components[0], 
+                           green: components[1], 
+                           blue: components[2], 
+                           opacity: components.count > 3 ? components[3] : 1.0)
+            } else {
+                return DesignSystem.Colors.neonBlue // デフォルト色
+            }
+        }
+    }
+    
     // 今日の時間ごとのポモドーロ完了数を取得
     var hourlyCompletedCountsToday: [Int] {
         return hourlyCompletedCounts(for: Date())
@@ -187,6 +253,16 @@ class TimerViewModel: ObservableObject {
     // 選択された日付の時間ごとのポモドーロ完了数を取得
     var hourlyCompletedCountsForSelectedDate: [Int] {
         return hourlyCompletedCounts(for: selectedDate)
+    }
+    
+    // 選択された日付の時間ごとの完了色情報を取得
+    var hourlyColorsForSelectedDate: [Color] {
+        return hourlyCompletedColors(for: selectedDate)
+    }
+    
+    // 今日の時間ごとの完了色情報を取得
+    var hourlyColorsForToday: [Color] {
+        return hourlyCompletedColors(for: Date())
     }
     
     // 指定された日付の完了数を取得
@@ -212,6 +288,7 @@ class TimerViewModel: ObservableObject {
         completedCountToday = 0
         saveCompletedCount()
         resetHourlyCompletedCount() // 時間ごとのデータもリセット
+        resetHourlyCompletedColors() // 色情報もリセット
     }
 
     // MARK: - Private Methods
@@ -224,12 +301,19 @@ class TimerViewModel: ObservableObject {
             } else {
                 self.timer?.invalidate()
                 self.timer = nil
+                
+                // タイマー完了時に.finished状態を設定
                 self.state = .finished
                 
-                if self.phase == .focus {
-                    self.completeFocusSession()
-                } else {
-                    self.completeBreakSession()
+                // 点滅アニメーションのための遅延処理
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+                    guard let self = self else { return }
+                    
+                    if self.phase == .focus {
+                        self.completeFocusSession()
+                    } else {
+                        self.completeBreakSession()
+                    }
                 }
             }
         }
@@ -261,12 +345,45 @@ class TimerViewModel: ObservableObject {
         var hourlyData = userDefaults.array(forKey: key) as? [Int] ?? Array(repeating: 0, count: 24)
         hourlyData[hour] += 1
         userDefaults.set(hourlyData, forKey: key)
+        
+        // 色情報も保存
+        saveHourlyCompletedColor(hour: hour)
+        
+        // カテゴリ統計も更新
+        if !currentTaskName.isEmpty {
+            // タスク名からカテゴリ名を抽出（例：タスク名が "Work: プロジェクトA" の場合、"Work" がカテゴリ）
+            let categoryName = extractCategoryFromTaskName(currentTaskName)
+            updateCategoryStatistics(categoryName: categoryName)
+        }
+    }
+    
+    private func saveHourlyCompletedColor(hour: Int) {
+        let now = Date()
+        let key = hourlyColorKey(for: now)
+        var hourlyColors = userDefaults.array(forKey: key) as? [[CGFloat]] ?? Array(repeating: [], count: 24)
+        
+        // 現在のタスクのカテゴリ色をRGB値で保存
+        let colorComponents = UIColor(currentTaskCategoryColor).cgColor.components ?? [0, 0.7, 1, 1]
+        hourlyColors[hour] = Array(colorComponents)
+        userDefaults.set(hourlyColors, forKey: key)
+    }
+    
+    private func hourlyColorKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "hourlyCompletedColor_\(formatter.string(from: date))"
     }
     
     private func resetHourlyCompletedCount() {
         let key = hourlyDateKey(for: Date())
         let emptyData = Array(repeating: 0, count: 24)
         userDefaults.set(emptyData, forKey: key)
+    }
+
+    private func resetHourlyCompletedColors() {
+        let key = hourlyColorKey(for: Date())
+        let emptyColors = Array(repeating: [], count: 24)
+        userDefaults.set(emptyColors, forKey: key)
     }
 
     private func loadCompletedCount() {
@@ -277,11 +394,30 @@ class TimerViewModel: ObservableObject {
     private func saveCurrentTask() {
         userDefaults.set(currentTaskName, forKey: "currentTaskName")
         userDefaults.set(currentTaskEstimatedMinutes, forKey: "currentTaskEstimatedMinutes")
+        
+        // カテゴリの色をRGB値で保存
+        let colorComponents = UIColor(currentTaskCategoryColor).cgColor.components ?? [0, 0.7, 1, 1] // デフォルトはneonBlue
+        userDefaults.set(Array(colorComponents), forKey: "currentTaskCategoryColor")
     }
 
     private func loadCurrentTask() {
         currentTaskName = userDefaults.string(forKey: "currentTaskName") ?? ""
         currentTaskEstimatedMinutes = userDefaults.integer(forKey: "currentTaskEstimatedMinutes")
+        
+        // カテゴリの色を復元
+        if let colorComponents = userDefaults.array(forKey: "currentTaskCategoryColor") as? [CGFloat],
+           colorComponents.count >= 3 {
+            currentTaskCategoryColor = Color(.sRGB, 
+                                           red: colorComponents[0], 
+                                           green: colorComponents[1], 
+                                           blue: colorComponents[2], 
+                                           opacity: colorComponents.count > 3 ? colorComponents[3] : 1.0)
+        } else {
+            currentTaskCategoryColor = DesignSystem.Colors.neonBlue
+        }
+        
+        // カテゴリ別統計データを読み込み
+        loadCategoryStatistics()
     }
     
     // MARK: - Settings Management
@@ -308,5 +444,53 @@ class TimerViewModel: ObservableObject {
                 totalTime = timeRemaining
             }
         }
+    }
+    
+    // MARK: - Category Statistics Management
+    private func loadCategoryStatistics() {
+        let key = categoryStatisticsKey(for: Date())
+        if let data = userDefaults.data(forKey: key),
+           let statistics = try? JSONDecoder().decode([String: Int].self, from: data) {
+            categoryStatistics = statistics
+        } else {
+            categoryStatistics = [:]
+        }
+    }
+    
+    private func saveCategoryStatistics() {
+        let key = categoryStatisticsKey(for: Date())
+        if let data = try? JSONEncoder().encode(categoryStatistics) {
+            userDefaults.set(data, forKey: key)
+        }
+    }
+    
+    private func categoryStatisticsKey(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        return "categoryStatistics_\(formatter.string(from: date))"
+    }
+    
+    func updateCategoryStatistics(categoryName: String) {
+        categoryStatistics[categoryName, default: 0] += 1
+        saveCategoryStatistics()
+    }
+    
+    func getCategoryStatistics(for date: Date) -> [String: Int] {
+        let key = categoryStatisticsKey(for: date)
+        if let data = userDefaults.data(forKey: key),
+           let statistics = try? JSONDecoder().decode([String: Int].self, from: data) {
+            return statistics
+        }
+        return [:]
+    }
+    
+    private func extractCategoryFromTaskName(_ taskName: String) -> String {
+        // タスク名からカテゴリ名を抽出
+        // 例: "Work: プロジェクトA" -> "Work"
+        if let colonIndex = taskName.firstIndex(of: ":") {
+            return String(taskName[..<colonIndex]).trimmingCharacters(in: .whitespaces)
+        }
+        // コロンがない場合は、タスク名をそのままカテゴリとして使用
+        return taskName
     }
 }

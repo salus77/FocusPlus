@@ -4,6 +4,7 @@ struct StatisticsView: View {
     @ObservedObject var viewModel: TimerViewModel
     @Binding var isPresented: Bool
     @Environment(\.dismiss) private var dismiss
+    @State private var showingCategoryStatistics = false
     
     var body: some View {
         NavigationView {
@@ -47,6 +48,7 @@ struct StatisticsView: View {
                         // Hourly Pomodoro Graph
                         HourlyPomodoroGraphView(
                             hourlyData: viewModel.hourlyCompletedCountsForSelectedDate,
+                            hourlyColors: viewModel.hourlyColorsForSelectedDate,
                             selectedDate: viewModel.selectedDate
                         )
                         .padding(.horizontal, 20)
@@ -113,11 +115,22 @@ struct StatisticsView: View {
                 }
             }
             .background(DesignSystem.Colors.background)
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        if value.translation.width < -50 {
+                            showingCategoryStatistics = true
+                        }
+                    }
+            )
         }
         .navigationBarHidden(true)
         .onAppear {
             // 統計画面が表示されるときに現在の日時を選択状態にする
             viewModel.resetSelectedDateToToday()
+        }
+        .sheet(isPresented: $showingCategoryStatistics) {
+            CategoryStatisticsView(viewModel: viewModel, isPresented: $showingCategoryStatistics)
         }
     }
 }
@@ -277,13 +290,15 @@ struct CalendarDayView: View {
 // MARK: - Hourly Pomodoro Graph View
 struct HourlyPomodoroGraphView: View {
     let hourlyData: [Int]
+    let hourlyColors: [Color]
     let selectedDate: Date
     
     private let timeLabels = ["0:00", "6:00", "12:00", "18:00"]
     private let maxValue: Int
     
-    init(hourlyData: [Int], selectedDate: Date) {
+    init(hourlyData: [Int], hourlyColors: [Color], selectedDate: Date) {
         self.hourlyData = hourlyData
+        self.hourlyColors = hourlyColors
         self.selectedDate = selectedDate
         self.maxValue = max(hourlyData.max() ?? 1, 1)
     }
@@ -315,10 +330,10 @@ struct HourlyPomodoroGraphView: View {
                             VStack(spacing: 1) {
                                 ForEach(0..<hourlyData[hour], id: \.self) { dotIndex in
                                     Circle()
-                                        .fill(Color.red)
+                                        .fill(hourlyColors[hour])
                                         .frame(width: 6, height: 6)
                                         .shadow(
-                                            color: Color.red.opacity(0.6),
+                                            color: hourlyColors[hour].opacity(0.6),
                                             radius: 1,
                                             x: 0,
                                             y: 0

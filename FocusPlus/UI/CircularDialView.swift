@@ -68,7 +68,7 @@ struct CircularDialView: View {
                         to: viewModel.state == .running ? (1 - progress) : progress
                     )
                     .stroke(
-                        DesignSystem.Colors.neonBlue,
+                        viewModel.state == .finished ? Color.white : DesignSystem.Colors.neonBlue,
                         style: StrokeStyle(lineWidth: 4, lineCap: .round)
                     )
                     .frame(width: geometry.size.width * 0.75, height: geometry.size.width * 0.75)
@@ -117,6 +117,8 @@ struct CircularDialView: View {
                     .frame(width: geometry.size.width * 0.9, height: geometry.size.width * 0.9)
                     .contentShape(Circle())
                     .gesture(
+                        // タイマーが実行中でない場合のみドラッグを有効化
+                        viewModel.state != .running ? 
                         DragGesture()
                             .onChanged { value in
                                 let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
@@ -180,6 +182,7 @@ struct CircularDialView: View {
                                     showHint = true
                                 }
                             }
+                        : nil
                     )
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -362,28 +365,47 @@ struct CircularDialView: View {
     private func startCompletionBlink() {
         print("🎬 点滅アニメーション開始: state = \(viewModel.state)")
         
-        // 2回の点滅を実行（より目立つように）
-        withAnimation(.easeInOut(duration: 0.4)) {
+        // プログレス円を白く点滅させるための状態
+        completionBlinkOpacity = 1.0
+        
+        // 1回目の点滅（白く）
+        withAnimation(.easeInOut(duration: 0.3)) {
             completionBlinkOpacity = 0.0
             print("🎬 点滅1回目: 透明化")
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-            withAnimation(.easeInOut(duration: 0.4)) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.easeInOut(duration: 0.3)) {
                 completionBlinkOpacity = 1.0
                 print("🎬 点滅1回目: 復元")
             }
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                withAnimation(.easeInOut(duration: 0.4)) {
+            // 1回目の振動
+            if self.viewModel.hapticsEnabled {
+                HapticsManager.shared.heavyImpact()
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // 2回目の点滅（白く）
+                withAnimation(.easeInOut(duration: 0.3)) {
                     completionBlinkOpacity = 0.0
                     print("🎬 点滅2回目: 透明化")
                 }
                 
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    withAnimation(.easeInOut(duration: 0.4)) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
                         completionBlinkOpacity = 1.0
                         print("🎬 点滅2回目: 復元完了")
+                    }
+                    
+                    // 2回目の振動
+                    if self.viewModel.hapticsEnabled {
+                        HapticsManager.shared.heavyImpact()
+                    }
+                    
+                    // 点滅完了後、BreakSheetView表示のためのコールバック
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        self.viewModel.onCompletionAnimationFinished()
                     }
                 }
             }
