@@ -59,11 +59,13 @@ class TimerViewModel: ObservableObject {
 
     private var timer: Timer?
     private let userDefaults = UserDefaults.standard
+    private let widgetUserDefaults = UserDefaults(suiteName: "group.com.delmar.FocusPlus")
 
     init() {
         loadSettings()
         loadCompletedCount()
         loadCurrentTask()
+        updateWidgetData()
     }
 
     // MARK: - Timer Control
@@ -78,6 +80,7 @@ class TimerViewModel: ObservableObject {
         }
         
         startTimer()
+        updateWidgetData()
         if hapticsEnabled {
             HapticsManager.shared.lightImpact()
         }
@@ -87,6 +90,7 @@ class TimerViewModel: ObservableObject {
         state = .paused
         timer?.invalidate()
         timer = nil
+        updateWidgetData()
         if hapticsEnabled {
             HapticsManager.shared.lightImpact()
         }
@@ -98,6 +102,7 @@ class TimerViewModel: ObservableObject {
         timer = nil
         timeRemaining = focusDuration * 60
         totalTime = timeRemaining
+        updateWidgetData()
         if hapticsEnabled {
             HapticsManager.shared.heavyImpact()
         }
@@ -141,6 +146,8 @@ class TimerViewModel: ObservableObject {
             totalTime = timeRemaining
             state = .idle
         }
+        
+        updateWidgetData()
     }
 
     // MARK: - Break Management
@@ -169,6 +176,7 @@ class TimerViewModel: ObservableObject {
             self.timeRemaining = self.breakDuration * 60
             self.totalTime = self.timeRemaining
             self.state = .idle
+            self.updateWidgetData()
         }
     }
 
@@ -186,6 +194,7 @@ class TimerViewModel: ObservableObject {
             self.timeRemaining = self.focusDuration * 60
             self.totalTime = self.timeRemaining
             self.state = .idle
+            self.updateWidgetData()
         }
     }
 
@@ -298,6 +307,7 @@ class TimerViewModel: ObservableObject {
             
             if self.timeRemaining > 0 {
                 self.timeRemaining -= 1
+                self.updateWidgetData()
             } else {
                 self.timer?.invalidate()
                 self.timer = nil
@@ -317,6 +327,12 @@ class TimerViewModel: ObservableObject {
                 }
             }
         }
+    }
+    
+    private func updateWidgetData() {
+        widgetUserDefaults?.set(completedCountToday, forKey: "completedCountToday")
+        widgetUserDefaults?.set(state == .running, forKey: "isTimerRunning")
+        widgetUserDefaults?.set(Int(timeRemaining), forKey: "timeRemaining")
     }
 
     private func dateKey(for date: Date) -> String {
