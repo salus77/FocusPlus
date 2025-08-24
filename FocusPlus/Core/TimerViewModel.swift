@@ -294,6 +294,62 @@ class TimerViewModel: ObservableObject {
         return total
     }
     
+    // 全体のカテゴリ別統計を取得
+    func getOverallCategoryStatistics() -> [String: Int] {
+        var overallStats: [String: Int] = [:]
+        
+        // 過去1年分のデータを集計
+        let calendar = Calendar.current
+        let oneYearAgo = calendar.date(byAdding: .year, value: -1, to: Date()) ?? Date()
+        var currentDate = oneYearAgo
+        
+        while currentDate <= Date() {
+            let key = categoryStatisticsKey(for: currentDate)
+            if let data = userDefaults.data(forKey: key),
+               let statistics = try? JSONDecoder().decode([String: Int].self, from: data) {
+                for (category, count) in statistics {
+                    overallStats[category, default: 0] += count
+                }
+            }
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+        }
+        
+        return overallStats
+    }
+    
+    // 選択された月のカテゴリ別統計を取得
+    func getMonthlyCategoryStatistics() -> [String: Int] {
+        var monthlyStats: [String: Int] = [:]
+        
+        let calendar = Calendar.current
+        let monthStart = calendar.dateInterval(of: .month, for: selectedCalendarMonth)?.start ?? selectedCalendarMonth
+        let monthEnd = calendar.dateInterval(of: .month, for: selectedCalendarMonth)?.end ?? selectedCalendarMonth
+        var currentDate = monthStart
+        
+        while currentDate < monthEnd {
+            let key = categoryStatisticsKey(for: currentDate)
+            if let data = userDefaults.data(forKey: key),
+               let statistics = try? JSONDecoder().decode([String: Int].self, from: data) {
+                for (category, count) in statistics {
+                    monthlyStats[category, default: 0] += count
+                }
+            }
+            currentDate = calendar.date(byAdding: .day, value: 1, to: currentDate) ?? currentDate
+        }
+        
+        return monthlyStats
+    }
+    
+    // カテゴリ別統計をソートして上位N件を取得
+    func getTopCategories(from statistics: [String: Int], limit: Int = 5) -> [(category: String, count: Int)] {
+        return statistics.sorted { $0.value > $1.value }.prefix(limit).map { ($0.key, $0.value) }
+    }
+    
+    // カテゴリ別統計の合計を取得
+    func getTotalCount(from statistics: [String: Int]) -> Int {
+        return statistics.values.reduce(0, +)
+    }
+    
     // 選択された日付の時間ごとのポモドーロ完了数を取得
     func hourlyCompletedCounts(for date: Date) -> [Int] {
         let key = hourlyDateKey(for: date)

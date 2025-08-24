@@ -4,7 +4,7 @@ struct StatisticsView: View {
     @ObservedObject var viewModel: TimerViewModel
     @Binding var isPresented: Bool
     @Environment(\.dismiss) private var dismiss
-    @State private var showingCategoryStatistics = false
+
     
     var body: some View {
         NavigationView {
@@ -78,6 +78,22 @@ struct StatisticsView: View {
                             ]
                         )
                         
+                        // Monthly Category Statistics
+                        CategoryStatisticsCard(
+                            title: "月間カテゴリ別統計",
+                            icon: "chart.pie.fill",
+                            statistics: viewModel.getMonthlyCategoryStatistics(),
+                            totalCount: viewModel.getTotalCount(from: viewModel.getMonthlyCategoryStatistics())
+                        )
+                        
+                        // Overall Category Statistics
+                        CategoryStatisticsCard(
+                            title: "全体カテゴリ別統計",
+                            icon: "chart.bar.fill",
+                            statistics: viewModel.getOverallCategoryStatistics(),
+                            totalCount: viewModel.getTotalCount(from: viewModel.getOverallCategoryStatistics())
+                        )
+                        
                         // Current Task
                         if !viewModel.currentTaskName.isEmpty {
                             StatCard(
@@ -115,23 +131,14 @@ struct StatisticsView: View {
                 }
             }
             .background(DesignSystem.Colors.background)
-            .gesture(
-                DragGesture()
-                    .onEnded { value in
-                        if value.translation.width < -50 {
-                            showingCategoryStatistics = true
-                        }
-                    }
-            )
+
         }
         .navigationBarHidden(true)
         .onAppear {
             // 統計画面が表示されるときに現在の日時を選択状態にする
             viewModel.resetSelectedDateToToday()
         }
-        .sheet(isPresented: $showingCategoryStatistics) {
-            CategoryStatisticsView(viewModel: viewModel, isPresented: $showingCategoryStatistics)
-        }
+
     }
 }
 
@@ -410,6 +417,88 @@ struct StatCard: View {
 struct StatItem {
     let label: String
     let value: String
+}
+
+// MARK: - Category Statistics Card
+struct CategoryStatisticsCard: View {
+    let title: String
+    let icon: String
+    let statistics: [String: Int]
+    let totalCount: Int
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(DesignSystem.Colors.neonBlue)
+                
+                Text(title)
+                    .subheadlineStyle()
+                    .secondaryText()
+                
+                Spacer()
+                
+                Text("合計: \(totalCount)回")
+                    .captionStyle()
+                    .secondaryText()
+            }
+            
+            if statistics.isEmpty {
+                Text("データがありません")
+                    .captionStyle()
+                    .secondaryText()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(Array(statistics.sorted { $0.value > $1.value }.prefix(5)), id: \.key) { category, count in
+                        CategoryStatRow(
+                            category: category,
+                            count: count,
+                            percentage: totalCount > 0 ? Double(count) / Double(totalCount) * 100 : 0
+                        )
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(Color.white.opacity(0.05))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+}
+
+// MARK: - Category Stat Row
+struct CategoryStatRow: View {
+    let category: String
+    let count: Int
+    let percentage: Double
+    
+    var body: some View {
+        HStack {
+            Text(category)
+                .bodyStyle()
+                .primaryText()
+                .lineLimit(1)
+            
+            Spacer()
+            
+            HStack(spacing: 8) {
+                Text("\(count)回")
+                    .bodyStyle()
+                    .secondaryText()
+                
+                Text("(\(String(format: "%.1f", percentage))%)")
+                    .captionStyle()
+                    .secondaryText()
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.03))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
 }
 
 #Preview {
