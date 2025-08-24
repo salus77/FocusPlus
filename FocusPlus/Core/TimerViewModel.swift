@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UserNotifications
 
 enum TimerState {
     case idle
@@ -66,6 +67,57 @@ class TimerViewModel: ObservableObject {
         loadCompletedCount()
         loadCurrentTask()
         updateWidgetData()
+        // アプリ起動時にバッジをクリア
+        clearBadge()
+        
+        // アプリのアクティブ状態を監視
+        setupAppStateMonitoring()
+    }
+    
+    // MARK: - App State Monitoring
+    private func setupAppStateMonitoring() {
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.clearBadge()
+            self?.startBadgeMonitoring()
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.willEnterForegroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.clearBadge()
+            self?.startBadgeMonitoring()
+        }
+        
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.stopBadgeMonitoring()
+        }
+    }
+    
+    private var badgeMonitoringTimer: Timer?
+    
+    private func startBadgeMonitoring() {
+        // 既存のタイマーを停止
+        stopBadgeMonitoring()
+        
+        // 1秒ごとにバッジをチェックしてクリア
+        badgeMonitoringTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.clearBadge()
+        }
+    }
+    
+    private func stopBadgeMonitoring() {
+        badgeMonitoringTimer?.invalidate()
+        badgeMonitoringTimer = nil
     }
 
     // MARK: - Timer Control
@@ -168,6 +220,13 @@ class TimerViewModel: ObservableObject {
             SoundManager.shared.playChime()
         }
         
+        // 通知の送信
+        let taskName = currentTaskName.isEmpty ? "集中セッション" : currentTaskName
+        sendNotification(
+            title: "集中セッション完了！",
+            body: "\(taskName)が完了しました。お疲れ様でした！"
+        )
+        
         // 点滅アニメーション完了後に状態をリセット
         // この処理はCircularDialViewのアニメーション完了後に実行される
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
@@ -185,6 +244,12 @@ class TimerViewModel: ObservableObject {
         if soundEnabled {
             SoundManager.shared.playChime()
         }
+        
+        // 通知の送信
+        sendNotification(
+            title: "休憩時間完了",
+            body: "休憩が終わりました。次の集中セッションを始めましょう！"
+        )
         
         // 点滅アニメーション完了後に状態をリセット
         // この処理はCircularDialViewのアニメーション完了後に実行される
@@ -508,5 +573,46 @@ class TimerViewModel: ObservableObject {
         }
         // コロンがない場合は、タスク名をそのままカテゴリとして使用
         return taskName
+    }
+    
+    // MARK: - Notification Management
+    private func sendNotification(title: String, body: String, categoryIdentifier: String = "FOCUSPLUS_TIMER") {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.categoryIdentifier = categoryIdentifier
+        content.badge = NSNumber(value: 1) // バッジ数を1に設定
+        
+        // 即座に通知を送信
+        let request = UNNotificationRequest(
+            identifier: UUID().uuidString,
+            content: content,
+            trigger: nil
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error = error {
+                print("通知の送信でエラーが発生しました: \(error.localizedDescription)")
+            } else {
+                print("通知が正常に送信されました")
+                // バッジ数を1に設定
+                DispatchQueue.main.async {
+                    UIApplication.shared.applicationIconBadgeNumber = 1
+                }
+            }
+        }
+    }
+
+    // MARK: - Badge Management
+    func clearBadge() {
+        UIApplication.shared.applicationIconBadgeNumber = 0
+        UNUserNotificationCenter.current().setBadgeCount(0)
+    }
+    
+    // MARK: - Cleanup
+    deinit {
+        stopBadgeMonitoring()
+        NotificationCenter.default.removeObserver(self)
     }
 }
