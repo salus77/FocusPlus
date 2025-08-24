@@ -214,50 +214,68 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var showingHelp = false
     @State private var showingTaskManager = false
+    @State private var showingRightMenu = false
     @State private var taskManagerOffset: CGFloat = 0
+    @State private var rightMenuOffset: CGFloat = 0
     @State private var orientation = UIDeviceOrientation.portrait
     
     var body: some View {
-        GeometryReader { geometry in
-            ZStack {
-                // Background
-                DesignSystem.Colors.background
-                    .ignoresSafeArea()
-                
-                if orientation.isLandscape {
-                    // 横置きレイアウト
-                    landscapeLayout(geometry: geometry)
-                } else {
-                    // 縦置きレイアウト
-                    portraitLayout
+        NavigationView {
+            GeometryReader { geometry in
+                ZStack {
+                    // Background
+                    DesignSystem.Colors.background
+                        .ignoresSafeArea()
+                    
+                    if orientation.isLandscape {
+                        // 横置きレイアウト
+                        landscapeLayout(geometry: geometry)
+                    } else {
+                        // 縦置きレイアウト
+                        portraitLayout
+                    }
+                    
+                    // 非表示のNavigationLink（設定画面用）
+                    NavigationLink(
+                        destination: SettingsView(viewModel: viewModel, isPresented: $showingSettings),
+                        isActive: $showingSettings
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
+                    
+                    // 非表示のNavigationLink（統計画面用）
+                    NavigationLink(
+                        destination: StatisticsView(viewModel: viewModel, isPresented: $showingStatistics),
+                        isActive: $showingStatistics
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
                 }
             }
-        }
-        .onRotate { newOrientation in
-            orientation = newOrientation
-        }
-        .onChange(of: viewModel.state) { _, newState in
-            if newState == .finished && viewModel.phase == .focus {
-                // 点滅アニメーション完了後にBreakSheetViewを表示
-                viewModel.onCompletionAnimationFinished = {
-                    showingBreakSheet = true
+            .navigationBarHidden(true)
+            .onRotate { newOrientation in
+                orientation = newOrientation
+            }
+            .onChange(of: viewModel.state) { _, newState in
+                if newState == .finished && viewModel.phase == .focus {
+                    // 点滅アニメーション完了後にBreakSheetViewを表示
+                    viewModel.onCompletionAnimationFinished = {
+                        showingBreakSheet = true
+                    }
                 }
             }
+            .sheet(isPresented: $showingBreakSheet) {
+                BreakSheetView(viewModel: viewModel)
+            }
+            .sheet(isPresented: $showingHelp) {
+                HelpView(isPresented: $showingHelp)
+            }
+            .overlay(taskManagerOverlay)
+            .overlay(rightMenuOverlay)
+            .gesture(swipeGesture)
         }
-        .sheet(isPresented: $showingBreakSheet) {
-            BreakSheetView(viewModel: viewModel)
-        }
-        .sheet(isPresented: $showingStatistics) {
-            StatisticsView(viewModel: viewModel, isPresented: $showingStatistics)
-        }
-        .sheet(isPresented: $showingSettings) {
-            SettingsView(viewModel: viewModel, isPresented: $showingSettings)
-        }
-        .sheet(isPresented: $showingHelp) {
-            HelpView(isPresented: $showingHelp)
-        }
-        .overlay(taskManagerOverlay)
-        .gesture(swipeGesture)
     }
     
     // MARK: - Layout Views
@@ -347,22 +365,63 @@ struct ContentView: View {
         }
     }
     
+    // MARK: - Right Menu Overlay
+    @ViewBuilder
+    private var rightMenuOverlay: some View {
+        if showingRightMenu {
+            ZStack {
+                // 背景の半透明オーバーレイ
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            showingRightMenu = false
+                            rightMenuOffset = 0
+                        }
+                    }
+                
+                // 右側メニュー
+                HStack {
+                    Spacer()
+                    
+                    RightMenuOverlay(
+                        onSettingsTapped: {
+                            showingRightMenu = false
+                            rightMenuOffset = 0
+                            showingSettings = true
+                        },
+                        onStatisticsTapped: {
+                            showingRightMenu = false
+                            rightMenuOffset = 0
+                            showingStatistics = true
+                        }
+                    )
+                    .transition(.move(edge: .trailing))
+                }
+            }
+        }
+    }
+    
     private var swipeGesture: some Gesture {
         DragGesture()
             .onChanged { value in
                 // 左から右へのスワイプでタスク管理
                 if value.translation.width > 0 && abs(value.translation.width) > 50 {
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        showingTaskManager = true
-                        taskManagerOffset = value.translation.width
+                    // 右側メニューが表示されている場合はタスク管理を表示しない
+                    if !showingRightMenu {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            showingTaskManager = true
+                            taskManagerOffset = value.translation.width
+                        }
                     }
                 }
-                // 右から左へのスワイプで設定画面
+                // 右から左へのスワイプで右側メニュー
                 if value.translation.width < 0 && abs(value.translation.width) > 50 {
-                    // タスク管理が表示されている場合は設定画面を表示しない
+                    // タスク管理が表示されている場合は右側メニューを表示しない
                     if !showingTaskManager {
                         withAnimation(.easeOut(duration: 0.3)) {
-                            showingSettings = true
+                            showingRightMenu = true
+                            rightMenuOffset = abs(value.translation.width)
                         }
                     }
                 }
@@ -370,17 +429,21 @@ struct ContentView: View {
             .onEnded { value in
                 if value.translation.width > 100 {
                     // 左から右へのスワイプでタスク管理を表示
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        showingTaskManager = true
-                        taskManagerOffset = 0
+                    // 右側メニューが表示されている場合はタスク管理を表示しない
+                    if !showingRightMenu {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            showingTaskManager = true
+                            taskManagerOffset = 0
+                        }
                     }
                 } else if value.translation.width < -100 {
-                    // 右から左へのスワイプで設定画面を表示
-                    // タスク管理が表示されている場合は設定画面を表示しない
+                    // 右から左へのスワイプで右側メニューを表示
+                    // タスク管理が表示されている場合は右側メニューを表示しない
                     if !showingTaskManager {
                         withAnimation(.easeOut(duration: 0.3)) {
                             HapticsManager.shared.lightImpact()
-                            showingSettings = true
+                            showingRightMenu = true
+                            rightMenuOffset = 0
                         }
                     }
                 } else {
@@ -388,6 +451,8 @@ struct ContentView: View {
                     withAnimation(.easeOut(duration: 0.3)) {
                         showingTaskManager = false
                         taskManagerOffset = 0
+                        showingRightMenu = false
+                        rightMenuOffset = 0
                     }
                 }
             }
@@ -871,6 +936,118 @@ struct BreakSheetView: View {
         .background(DesignSystem.Colors.background)
         .presentationDetents([.medium])
         .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Right Menu Overlay
+struct RightMenuOverlay: View {
+    let onSettingsTapped: () -> Void
+    let onStatisticsTapped: () -> Void
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // ヘッダー
+            VStack(spacing: 16) {
+                HStack {
+                    Spacer()
+                    Text("メニュー")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.top, 20)
+                
+                Divider()
+                    .background(Color.gray.opacity(0.3))
+            }
+            
+            // メニューアイテム
+            VStack(spacing: 0) {
+                // 設定
+                MenuItem(
+                    icon: "gearshape.fill",
+                    title: "設定",
+                    color: .blue
+                ) {
+                    HapticsManager.shared.lightImpact()
+                    onSettingsTapped()
+                }
+                
+                Divider()
+                    .background(Color.gray.opacity(0.3))
+                
+                // 統計
+                MenuItem(
+                    icon: "chart.bar.fill",
+                    title: "統計",
+                    color: .green
+                ) {
+                    HapticsManager.shared.lightImpact()
+                    onStatisticsTapped()
+                }
+            }
+            
+            Spacer()
+        }
+        .frame(width: 280)
+        .background(Color(.systemBackground))
+        .cornerRadius(16, corners: [.topLeft, .bottomLeft])
+        .shadow(color: .black.opacity(0.2), radius: 10, x: -5, y: 0)
+    }
+}
+
+// MARK: - Menu Item
+struct MenuItem: View {
+    let icon: String
+    let title: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.title2)
+                    .foregroundColor(color)
+                    .frame(width: 24)
+                
+                Text(title)
+                    .font(.body)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Corner Radius Extension
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
+    }
+}
+
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
+
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
+        )
+        return Path(path.cgPath)
     }
 }
 

@@ -454,6 +454,20 @@ class TimerViewModel: ObservableObject {
         widgetUserDefaults?.set(completedCountToday, forKey: "completedCountToday")
         widgetUserDefaults?.set(state == .running, forKey: "isTimerRunning")
         widgetUserDefaults?.set(Int(timeRemaining), forKey: "timeRemaining")
+        
+        // カテゴリ別統計をウィジットと共有
+        if let categoryData = try? JSONEncoder().encode(categoryStatistics) {
+            widgetUserDefaults?.set(categoryData, forKey: "categoryStatistics")
+        }
+        
+        // 時間別完了数も共有
+        let now = Date()
+        let key = hourlyDateKey(for: now)
+        if let hourlyData = userDefaults.array(forKey: key) as? [Int] {
+            if let hourlyDataEncoded = try? JSONEncoder().encode(hourlyData) {
+                widgetUserDefaults?.set(hourlyDataEncoded, forKey: "hourlyCompletedCounts")
+            }
+        }
     }
 
     private func dateKey(for date: Date) -> String {

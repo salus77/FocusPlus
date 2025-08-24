@@ -6,102 +6,79 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("設定")
-                        .largeTitleStyle()
-                        .primaryText()
-                    
-                    Spacer()
-                    
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(DesignSystem.Colors.secondary)
+        ScrollView {
+            VStack(spacing: 24) {
+                // Sound Settings
+                SettingsSection(title: "サウンド") {
+                    SettingsRow(
+                        icon: "speaker.wave.2.fill",
+                        title: "サウンドを有効にする",
+                        isOn: $viewModel.soundEnabled
+                    )
+                }
+                
+                // Haptics Settings
+                SettingsSection(title: "触覚フィードバック") {
+                    SettingsRow(
+                        icon: "iphone.radiowaves.left.and.right",
+                        title: "触覚フィードバックを有効にする",
+                        isOn: $viewModel.hapticsEnabled
+                    )
+                }
+                
+                // Timer Settings
+                SettingsSection(title: "タイマー設定") {
+                    VStack(spacing: 0) {
+                        SettingsSliderRow(
+                            icon: "timer",
+                            title: "集中時間",
+                            value: $viewModel.focusDuration,
+                            range: 5...60,
+                            unit: "分"
+                        )
+                        
+                        Divider()
+                            .background(Color.white.opacity(0.1))
+                        
+                        SettingsSliderRow(
+                            icon: "pause.fill",
+                            title: "休憩時間",
+                            value: $viewModel.breakDuration,
+                            range: 1...30,
+                            unit: "分"
+                        )
                     }
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 32)
                 
-                // Settings Content
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Sound Settings
-                        SettingsSection(title: "サウンド") {
-                            SettingsRow(
-                                icon: "speaker.wave.2.fill",
-                                title: "サウンドを有効にする",
-                                isOn: $viewModel.soundEnabled
-                            )
-                        }
+                // App Info
+                SettingsSection(title: "アプリ情報") {
+                    VStack(spacing: 0) {
+                        SettingsInfoRow(
+                            icon: "info.circle.fill",
+                            title: "バージョン",
+                            value: "1.0.0"
+                        )
                         
-                        // Haptics Settings
-                        SettingsSection(title: "触覚フィードバック") {
-                            SettingsRow(
-                                icon: "iphone.radiowaves.left.and.right",
-                                title: "触覚フィードバックを有効にする",
-                                isOn: $viewModel.hapticsEnabled
-                            )
-                        }
+                        Divider()
+                            .background(Color.white.opacity(0.1))
                         
-                        // Timer Settings
-                        SettingsSection(title: "タイマー設定") {
-                            VStack(spacing: 0) {
-                                SettingsSliderRow(
-                                    icon: "timer",
-                                    title: "集中時間",
-                                    value: $viewModel.focusDuration,
-                                    range: 5...60,
-                                    unit: "分"
-                                )
-                                
-                                Divider()
-                                    .background(Color.white.opacity(0.1))
-                                
-                                SettingsSliderRow(
-                                    icon: "pause.fill",
-                                    title: "休憩時間",
-                                    value: $viewModel.breakDuration,
-                                    range: 1...30,
-                                    unit: "分"
-                                )
-                            }
-                        }
-                        
-                        // App Info
-                        SettingsSection(title: "アプリ情報") {
-                            VStack(spacing: 0) {
-                                SettingsInfoRow(
-                                    icon: "info.circle.fill",
-                                    title: "バージョン",
-                                    value: "1.0.0"
-                                )
-                                
-                                Divider()
-                                    .background(Color.white.opacity(0.1))
-                                
-                                SettingsInfoRow(
-                                    icon: "person.fill",
-                                    title: "開発者",
-                                    value: "Yasutaka Otsubo"
-                                )
-                            }
-                        }
+                        SettingsInfoRow(
+                            icon: "person.fill",
+                            title: "開発者",
+                            value: "Yasutaka Otsubo"
+                        )
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 50)
                 }
             }
-            .background(DesignSystem.Colors.background)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 50)
         }
-        .navigationBarHidden(true)
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+        .background(DesignSystem.Colors.background)
+        .navigationTitle("設定")
+        .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            // 設定画面が表示されるときの処理
+        }
     }
 }
 

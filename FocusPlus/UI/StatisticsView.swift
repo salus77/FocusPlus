@@ -7,138 +7,110 @@ struct StatisticsView: View {
 
     
     var body: some View {
-        NavigationView {
-            VStack(spacing: 0) {
-                // Header
-                HStack {
-                    Text("統計")
-                        .largeTitleStyle()
-                        .primaryText()
+        ScrollView {
+            VStack(spacing: 24) {
+                // Calendar Section
+                VStack(spacing: 16) {
+                    Text("カレンダー")
+                        .subheadlineStyle()
+                        .secondaryText()
                     
-                    Spacer()
-                    
-                    Button(action: {
-                        dismiss()
-                    }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(DesignSystem.Colors.secondary)
+                    CalendarView(viewModel: viewModel)
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Hourly Pomodoro Graph
+                HourlyPomodoroGraphView(
+                    hourlyData: viewModel.hourlyCompletedCountsForSelectedDate,
+                    hourlyColors: viewModel.hourlyColorsForSelectedDate,
+                    selectedDate: viewModel.selectedDate
+                )
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+                .background(Color.white.opacity(0.05))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Selected Date Statistics
+                StatCard(
+                    title: "統計情報",
+                    icon: "calendar.badge.clock",
+                    items: [
+                        StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedDate)回"),
+                        StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedDate * 25)分")
+                    ]
+                )
+                
+                // Monthly Statistics
+                StatCard(
+                    title: "月間統計",
+                    icon: "calendar.badge.plus",
+                    items: [
+                        StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedMonth)回"),
+                        StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedMonth * 25)分")
+                    ]
+                )
+                
+                // Monthly Category Statistics
+                CategoryStatisticsCard(
+                    title: "月間カテゴリ別統計",
+                    icon: "chart.pie.fill",
+                    statistics: viewModel.getMonthlyCategoryStatistics(),
+                    totalCount: viewModel.getTotalCount(from: viewModel.getMonthlyCategoryStatistics())
+                )
+                
+                // Overall Category Statistics
+                CategoryStatisticsCard(
+                    title: "全体カテゴリ別統計",
+                    icon: "chart.bar.fill",
+                    statistics: viewModel.getOverallCategoryStatistics(),
+                    totalCount: viewModel.getTotalCount(from: viewModel.getOverallCategoryStatistics())
+                )
+                
+                // Current Task
+                if !viewModel.currentTaskName.isEmpty {
+                    StatCard(
+                        title: "現在のタスク",
+                        icon: "checkmark.circle.fill",
+                        items: [
+                            StatItem(label: "タスク名", value: viewModel.currentTaskName),
+                            StatItem(label: "推定時間", value: "\(viewModel.currentTaskEstimatedMinutes)分")
+                        ]
+                    )
+                }
+                
+                // Reset Button
+                Button(action: {
+                    viewModel.resetCompletedCount()
+                }) {
+                    HStack(spacing: 12) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.title3)
+                        
+                        Text("完了数をリセット")
+                            .headlineStyle()
                     }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(DesignSystem.Colors.warning)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 32)
-                
-                // Statistics Content
-                ScrollView {
-                    VStack(spacing: 24) {
-                        // Calendar Section
-                        VStack(spacing: 16) {
-                            Text("カレンダー")
-                                .subheadlineStyle()
-                                .secondaryText()
-                            
-                            CalendarView(viewModel: viewModel)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .background(Color.white.opacity(0.05))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        
-                        // Hourly Pomodoro Graph
-                        HourlyPomodoroGraphView(
-                            hourlyData: viewModel.hourlyCompletedCountsForSelectedDate,
-                            hourlyColors: viewModel.hourlyColorsForSelectedDate,
-                            selectedDate: viewModel.selectedDate
-                        )
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .background(Color.white.opacity(0.05))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        
-
-                        
-                        // Selected Date Statistics
-                        StatCard(
-                            title: "統計情報",
-                            icon: "calendar.badge.clock",
-                            items: [
-                                StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedDate)回"),
-                                StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedDate * 25)分")
-                            ]
-                        )
-                        
-                        // Monthly Statistics
-                        StatCard(
-                            title: "月間統計",
-                            icon: "calendar.badge.plus",
-                            items: [
-                                StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedMonth)回"),
-                                StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedMonth * 25)分")
-                            ]
-                        )
-                        
-                        // Monthly Category Statistics
-                        CategoryStatisticsCard(
-                            title: "月間カテゴリ別統計",
-                            icon: "chart.pie.fill",
-                            statistics: viewModel.getMonthlyCategoryStatistics(),
-                            totalCount: viewModel.getTotalCount(from: viewModel.getMonthlyCategoryStatistics())
-                        )
-                        
-                        // Overall Category Statistics
-                        CategoryStatisticsCard(
-                            title: "全体カテゴリ別統計",
-                            icon: "chart.bar.fill",
-                            statistics: viewModel.getOverallCategoryStatistics(),
-                            totalCount: viewModel.getTotalCount(from: viewModel.getOverallCategoryStatistics())
-                        )
-                        
-                        // Current Task
-                        if !viewModel.currentTaskName.isEmpty {
-                            StatCard(
-                                title: "現在のタスク",
-                                icon: "checkmark.circle.fill",
-                                items: [
-                                    StatItem(label: "タスク名", value: viewModel.currentTaskName),
-                                    StatItem(label: "推定時間", value: "\(viewModel.currentTaskEstimatedMinutes)分")
-                                ]
-                            )
-                        }
-                        
-                        // Reset Button
-                        Button(action: {
-                            viewModel.resetCompletedCount()
-                        }) {
-                            HStack(spacing: 12) {
-                                Image(systemName: "arrow.clockwise")
-                                    .font(.title3)
-                                
-                                Text("完了数をリセット")
-                                    .headlineStyle()
-                            }
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 16)
-                            .background(DesignSystem.Colors.warning)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 16)
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 50)
-                }
+                .padding(.top, 16)
             }
-            .background(DesignSystem.Colors.background)
-
+            .padding(.horizontal, 24)
+            .padding(.bottom, 50)
         }
-        .navigationBarHidden(true)
+        .background(DesignSystem.Colors.background)
+        .navigationTitle("統計")
+        .navigationBarTitleDisplayMode(.large)
         .onAppear {
             // 統計画面が表示されるときに現在の日時を選択状態にする
             viewModel.resetSelectedDateToToday()
         }
-
     }
 }
 
