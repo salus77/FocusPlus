@@ -357,10 +357,13 @@ struct ContentView: View {
                         taskManagerOffset = value.translation.width
                     }
                 }
-                // 下から上へのスワイプで設定メニュー
-                if value.translation.height < 0 && abs(value.translation.height) > 50 {
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        showingSettings = true
+                // 右から左へのスワイプで設定画面
+                if value.translation.width < 0 && abs(value.translation.width) > 50 {
+                    // タスク管理が表示されている場合は設定画面を表示しない
+                    if !showingTaskManager {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            showingSettings = true
+                        }
                     }
                 }
             }
@@ -371,11 +374,14 @@ struct ContentView: View {
                         showingTaskManager = true
                         taskManagerOffset = 0
                     }
-                } else if value.translation.height < -100 {
-                    // 下から上へのスワイプで設定メニューを表示
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        HapticsManager.shared.lightImpact()
-                        showingSettings = true
+                } else if value.translation.width < -100 {
+                    // 右から左へのスワイプで設定画面を表示
+                    // タスク管理が表示されている場合は設定画面を表示しない
+                    if !showingTaskManager {
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            HapticsManager.shared.lightImpact()
+                            showingSettings = true
+                        }
                     }
                 } else {
                     // スワイプが不十分な場合は非表示
