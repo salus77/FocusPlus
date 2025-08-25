@@ -522,9 +522,19 @@ struct ContentView: View {
                 print("🔄 Swipe onChanged - translation: \(value.translation.width), showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
                 
                 if value.translation.width > 0 {
-                    taskManagerOffset = value.translation.width
+                    // 右から左へのドラッグ（右側メニューを閉じる）
+                    if showingRightMenu {
+                        rightMenuOffset = value.translation.width
+                    } else {
+                        taskManagerOffset = value.translation.width
+                    }
                 } else if value.translation.width < 0 {
-                    rightMenuOffset = abs(value.translation.width)
+                    // 左から右へのドラッグ（左側メニューを閉じる）
+                    if showingTaskManager {
+                        taskManagerOffset = abs(value.translation.width)
+                    } else {
+                        rightMenuOffset = abs(value.translation.width)
+                    }
                 }
             }
             .onEnded { value in
@@ -533,8 +543,17 @@ struct ContentView: View {
                 print("📊 Before state - showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
                 
                 if value.translation.width > 100 {
-                    // 左から右へのスワイプでタスク管理を表示
-                    if !showingRightMenu {
+                    // 右から左へのスワイプ
+                    if showingRightMenu {
+                        // 右側メニューを閉じる
+                        print("✅ Closing Right Menu (right-to-left swipe)")
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            HapticsManager.shared.lightImpact()
+                            showingRightMenu = false
+                            rightMenuOffset = 0
+                        }
+                    } else if !showingRightMenu {
+                        // 左から右へのスワイプでタスク管理を表示
                         print("✅ Showing Task Manager (left swipe)")
                         withAnimation(.easeOut(duration: 0.3)) {
                             HapticsManager.shared.lightImpact()
@@ -544,12 +563,19 @@ struct ContentView: View {
                             showingRightMenu = false
                             rightMenuOffset = 0
                         }
-                    } else {
-                        print("⚠️ Right menu is already showing, cannot show task manager")
                     }
                 } else if value.translation.width < -100 {
-                    // 右から左へのスワイプで右側メニューを表示
-                    if !showingTaskManager {
+                    // 左から右へのスワイプ
+                    if showingTaskManager {
+                        // 左側メニューを閉じる
+                        print("✅ Closing Task Manager (left-to-right swipe)")
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            HapticsManager.shared.lightImpact()
+                            showingTaskManager = false
+                            taskManagerOffset = 0
+                        }
+                    } else if !showingTaskManager {
+                        // 右から左へのスワイプで右側メニューを表示
                         print("✅ Showing Right Menu (right swipe)")
                         withAnimation(.easeOut(duration: 0.3)) {
                             HapticsManager.shared.lightImpact()
@@ -559,8 +585,6 @@ struct ContentView: View {
                             showingTaskManager = false
                             taskManagerOffset = 0
                         }
-                    } else {
-                        print("⚠️ Task manager is already showing, cannot show right menu")
                     }
                 } else {
                     // スワイプが不十分な場合は非表示
