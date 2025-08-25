@@ -428,7 +428,7 @@ struct ContentView: View {
                 
                 // プログレス円
                 CircularDialView(viewModel: viewModel)
-                    .frame(width: geometry.size.height * 0.85, height: geometry.size.height * 0.85)
+                    .frame(width: min(geometry.size.width * 0.4, geometry.size.height * 0.85), height: min(geometry.size.width * 0.4, geometry.size.height * 0.85))
             }
             .frame(maxWidth: .infinity)
             

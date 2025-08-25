@@ -114,7 +114,7 @@ struct CircularDialView: View {
                 // ドラッグ可能な円（目盛りエリアを含む）
                 Circle()
                     .fill(Color.clear)
-                    .frame(width: geometry.size.width * 0.9, height: geometry.size.width * 0.9)
+                    .frame(width: min(geometry.size.width, geometry.size.height) * 0.9, height: min(geometry.size.width, geometry.size.height) * 0.9)
                     .contentShape(Circle())
                     .gesture(
                         // タイマーが実行中でない場合のみドラッグを有効化（idle, paused, finished状態で有効）
