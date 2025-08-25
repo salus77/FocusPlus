@@ -626,6 +626,36 @@ class TimerViewModel: ObservableObject {
         saveCategoryStatistics()
     }
     
+    // MARK: - Category Color Management
+    func updateCurrentTaskCategoryColor(_ color: Color) {
+        currentTaskCategoryColor = color
+    }
+    
+    func getCategoryColor(for categoryName: String) -> Color {
+        // カテゴリ名に対応する色を返す
+        // 既存のカテゴリの場合はその色を、新規の場合はデフォルト色を返す
+        switch categoryName.lowercased() {
+        case "仕事", "work":
+            return .blue
+        case "勉強", "study":
+            return .green
+        case "運動", "exercise", "fitness":
+            return .orange
+        case "趣味", "hobby":
+            return .purple
+        case "家事", "housework":
+            return .pink
+        case "読書", "reading":
+            return .mint
+        case "音楽", "music":
+            return .teal
+        case "料理", "cooking":
+            return .brown
+        default:
+            return DesignSystem.Colors.neonBlue
+        }
+    }
+    
     func getCategoryStatistics(for date: Date) -> [String: Int] {
         let key = categoryStatisticsKey(for: date)
         if let data = userDefaults.data(forKey: key),

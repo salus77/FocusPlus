@@ -11,6 +11,7 @@ struct EditTaskView: View {
     @State private var estimatedMinutes: Int = 25
     @State private var selectedPriority: TaskPriority = .medium
     @State private var isCompleted: Bool = false
+    @State private var showingDeleteAlert = false
     
     var body: some View {
         NavigationView {
@@ -115,6 +116,20 @@ struct EditTaskView: View {
                         }
                         .disabled(!canSaveTask)
                         .buttonStyle(PlainButtonStyle())
+                        
+                        // 削除ボタン
+                        Button(action: {
+                            showingDeleteAlert = true
+                        }) {
+                            Text("タスクを削除")
+                                .headlineStyle()
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 16)
+                                .background(Color.red)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                     .padding(.horizontal, 24)
                     .padding(.bottom, 50)
@@ -125,6 +140,14 @@ struct EditTaskView: View {
         .navigationBarHidden(true)
         .onAppear {
             loadTaskData()
+        }
+        .alert("タスクを削除", isPresented: $showingDeleteAlert) {
+            Button("キャンセル", role: .cancel) { }
+            Button("削除", role: .destructive) {
+                deleteTask()
+            }
+        } message: {
+            Text("このタスクを削除しますか？この操作は取り消せません。")
         }
     }
     
@@ -149,6 +172,11 @@ struct EditTaskView: View {
         updatedTask.isCompleted = isCompleted
         
         taskManager.updateTask(updatedTask, in: category.id)
+        isPresented = false
+    }
+    
+    private func deleteTask() {
+        taskManager.deleteTask(task, from: category)
         isPresented = false
     }
 }

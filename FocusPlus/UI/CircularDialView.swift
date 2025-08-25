@@ -31,7 +31,7 @@ struct CircularDialView: View {
                     Circle()
                         .trim(from: 0, to: 1)
                         .stroke(
-                            DesignSystem.Colors.neonBlue.opacity(0.15),
+                            viewModel.currentTaskCategoryColor.opacity(0.15),
                             style: StrokeStyle(lineWidth: 4, lineCap: .round)
                         )
                         .frame(width: geometry.size.width * 0.75, height: geometry.size.width * 0.75)
@@ -68,7 +68,7 @@ struct CircularDialView: View {
                         to: viewModel.state == .running ? (1 - progress) : progress
                     )
                     .stroke(
-                        viewModel.state == .finished ? Color.white : DesignSystem.Colors.neonBlue,
+                        viewModel.state == .finished ? Color.white : viewModel.currentTaskCategoryColor,
                         style: StrokeStyle(lineWidth: 4, lineCap: .round)
                     )
                     .frame(width: geometry.size.width * 0.75, height: geometry.size.width * 0.75)
@@ -82,18 +82,18 @@ struct CircularDialView: View {
                                // ドラッグ中の時間表示（少し大きく）
                                Text(timeString(from: timeFromDrag()))
                                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                                   .foregroundColor(DesignSystem.Colors.neonBlue)
+                                   .foregroundColor(viewModel.currentTaskCategoryColor)
                                    .animation(.easeInOut(duration: 0.2), value: isDragging)
                            } else if viewModel.state == .running {
                                // タイマー実行中の時間表示（大きく）
                                Text(timeString(from: viewModel.timeRemaining))
                                    .font(.system(size: 52, weight: .bold, design: .rounded))
-                                   .foregroundColor(Color.gray)
+                                   .foregroundColor(viewModel.currentTaskCategoryColor)
                            } else {
                                // 通常の時間表示（停止中）
                                Text(timeString(from: viewModel.timeRemaining))
                                    .font(.system(size: 42, weight: .bold, design: .rounded))
-                                   .foregroundColor(DesignSystem.Colors.neonBlue)
+                                   .foregroundColor(viewModel.currentTaskCategoryColor)
                            }
                     
                                                // フェーズ表示（文言を削除してよりミニマルに）
@@ -105,7 +105,7 @@ struct CircularDialView: View {
                     if showHint && !isDragging && viewModel.state != .running {
                         Text("ドラッグで時間設定")
                             .font(.caption)
-                            .foregroundColor(Color.white.opacity(0.6))
+                            .foregroundColor(viewModel.currentTaskCategoryColor.opacity(0.7))
                             .opacity(showHint ? 1 : 0)
                             .animation(.easeInOut(duration: 0.3), value: showHint)
                     }
@@ -117,10 +117,11 @@ struct CircularDialView: View {
                     .frame(width: geometry.size.width * 0.9, height: geometry.size.width * 0.9)
                     .contentShape(Circle())
                     .gesture(
-                        // タイマーが実行中でない場合のみドラッグを有効化
+                        // タイマーが実行中でない場合のみドラッグを有効化（idle, paused, finished状態で有効）
                         viewModel.state != .running ? 
                         DragGesture()
                             .onChanged { value in
+                                print("🎯 ドラッグ開始 - 状態: \(viewModel.state)")
                                 let center = CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
                                 
                                 if !isDragging {
@@ -141,18 +142,10 @@ struct CircularDialView: View {
                                 // 前回の角度を更新
                                 previousAngle = currentAngle
                                 
-                                                // 角度から直接時間を計算（0度 = 0分、6度 = 1分、360度 = 60分）
-                let newTime = angleToTime(dragAngle)
+                                // 角度から直接時間を計算（0度 = 0分、6度 = 1分、360度 = 60分）
+                                let newTime = angleToTime(dragAngle)
                                 
-                                // デバッグログは無効化（必要に応じて有効化可能）
-                                #if DEBUG && false
-                                let progressValue = dragAngle / 360.0
-                                print("🔍 ドラッグ角度計算:")
-                                print("  指の位置角度: \(dragAngle)°")
-                                print("  設定時間: \(newTime/60)分")
-                                print("  プログレス: \(progressValue) (\(progressValue*100)%)")
-                                print("  📍 指の位置 = プログレス位置")
-                                #endif
+                                print("🔍 ドラッグ角度計算: 角度=\(String(format: "%.1f", dragAngle))°, 時間=\(newTime/60)分")
                                 
                                 // 時間を更新（totalTimeは最初の1回のみ）
                                 if viewModel.totalTime == 0 {
@@ -168,6 +161,7 @@ struct CircularDialView: View {
                                 }
                             }
                             .onEnded { _ in
+                                print("🎯 ドラッグ終了 - 最終時間: \(viewModel.timeRemaining/60)分")
                                 isDragging = false
                                 
                                 // ドラッグ終了時の振動フィードバック
@@ -184,6 +178,12 @@ struct CircularDialView: View {
                             }
                         : nil
                     )
+                    .onAppear {
+                        print("🎯 CircularDialView onAppear - 現在の状態: \(viewModel.state)")
+                    }
+                    .onChange(of: viewModel.state) { _, newState in
+                        print("🎯 タイマー状態変更: \(newState) - ドラッグ可能: \(newState != .running)")
+                    }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {

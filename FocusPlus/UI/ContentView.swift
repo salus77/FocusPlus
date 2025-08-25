@@ -155,6 +155,13 @@ class TaskManager: ObservableObject {
         }
     }
     
+    func deleteTask(_ task: TaskItem, from category: TaskCategory) {
+        if let categoryIndex = categories.firstIndex(where: { $0.id == category.id }) {
+            categories[categoryIndex].tasks.removeAll { $0.id == task.id }
+            saveCategories()
+        }
+    }
+    
     func toggleTaskCompletion(_ taskId: UUID, in categoryId: UUID) {
         if let categoryIndex = categories.firstIndex(where: { $0.id == categoryId }),
            let taskIndex = categories[categoryIndex].tasks.firstIndex(where: { $0.id == taskId }) {
@@ -210,110 +217,178 @@ struct ContentView: View {
     @StateObject private var viewModel = TimerViewModel()
     @StateObject private var taskManager = TaskManager()
     @State private var showingBreakSheet = false
-    @State private var showingStatistics = false
-    @State private var showingSettings = false
     @State private var showingHelp = false
     @State private var showingTaskManager = false
     @State private var showingRightMenu = false
     @State private var taskManagerOffset: CGFloat = 0
     @State private var rightMenuOffset: CGFloat = 0
-    @State private var orientation = UIDeviceOrientation.portrait
+    
+    // MARK: - Navigation State
+    @State private var navigationState: NavigationState = .none
+    
+    enum NavigationState {
+        case none
+        case settings
+        case statistics
+        case taskManagement
+    }
+    
+    // MARK: - Computed Properties for Navigation
+    private var showingSettings: Binding<Bool> {
+        Binding(
+            get: { navigationState == .settings },
+            set: { if !$0 { navigationState = .none } }
+        )
+    }
+    
+    private var showingStatistics: Binding<Bool> {
+        Binding(
+            get: { navigationState == .statistics },
+            set: { if !$0 { navigationState = .none } }
+        )
+    }
+    
+    private var showingTaskManagement: Binding<Bool> {
+        Binding(
+            get: { navigationState == .taskManagement },
+            set: { if !$0 { navigationState = .none } }
+        )
+    }
+    
+    // MARK: - Navigation Coordinator
+    private func navigateTo(_ state: NavigationState) {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            navigationState = state
+        }
+    }
+    
+    private func dismissNavigation() {
+        withAnimation(.easeInOut(duration: 0.3)) {
+            navigationState = .none
+        }
+    }
+    
+    // Apple公式推奨の環境変数を使用
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             GeometryReader { geometry in
                 ZStack {
-                    // Background
+                    // 背景色を全体に適用
                     DesignSystem.Colors.background
                         .ignoresSafeArea()
                     
-                    if orientation.isLandscape {
-                        // 横置きレイアウト
-                        landscapeLayout(geometry: geometry)
-                    } else {
-                        // 縦置きレイアウト
-                        portraitLayout
+                    // Apple公式推奨の環境変数ベースのレイアウト制御
+                    Group {
+                        if horizontalSizeClass == .regular {
+                            // 横置きレイアウト（Apple公式推奨）
+                            landscapeLayout(geometry: geometry)
+                        } else {
+                            // 縦置きレイアウト
+                            portraitLayout(geometry: geometry)
+                        }
                     }
-                    
-                    // 非表示のNavigationLink（設定画面用）
-                    NavigationLink(
-                        destination: SettingsView(viewModel: viewModel, isPresented: $showingSettings),
-                        isActive: $showingSettings
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
-                    
-                    // 非表示のNavigationLink（統計画面用）
-                    NavigationLink(
-                        destination: StatisticsView(viewModel: viewModel, isPresented: $showingStatistics),
-                        isActive: $showingStatistics
-                    ) {
-                        EmptyView()
-                    }
-                    .hidden()
                 }
-            }
-            .navigationBarHidden(true)
-            .onRotate { newOrientation in
-                orientation = newOrientation
-            }
-            .onChange(of: viewModel.state) { _, newState in
-                if newState == .finished && viewModel.phase == .focus {
-                    // 点滅アニメーション完了後にBreakSheetViewを表示
-                    viewModel.onCompletionAnimationFinished = {
-                        showingBreakSheet = true
+                .navigationBarHidden(true)
+                .onChange(of: viewModel.state) { _, newState in
+                    if newState == .finished && viewModel.phase == .focus {
+                        // 点滅アニメーション完了後にBreakSheetViewを表示
+                        viewModel.onCompletionAnimationFinished = {
+                            showingBreakSheet = true
+                        }
                     }
                 }
             }
-            .sheet(isPresented: $showingBreakSheet) {
-                BreakSheetView(viewModel: viewModel)
+            .navigationDestination(isPresented: showingStatistics) {
+                StatisticsView(viewModel: viewModel, isPresented: showingStatistics)
+                    .onDisappear {
+                        dismissNavigation()
+                    }
             }
-            .sheet(isPresented: $showingHelp) {
-                HelpView(isPresented: $showingHelp)
+            .navigationDestination(isPresented: showingSettings) {
+                SettingsView(viewModel: viewModel, isPresented: showingSettings)
+                    .onDisappear {
+                        dismissNavigation()
+                    }
             }
-            .overlay(taskManagerOverlay)
-            .overlay(rightMenuOverlay)
-            .gesture(swipeGesture)
+            .navigationDestination(isPresented: showingTaskManagement) {
+                TaskManagementView(taskManager: taskManager)
+                    .onDisappear {
+                        dismissNavigation()
+                    }
+            }
         }
+        .sheet(isPresented: $showingBreakSheet) {
+            BreakSheetView(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingHelp) {
+            HelpView(isPresented: $showingHelp)
+        }
+        .gesture(swipeGesture)
+        .overlay(landscapeOverlay)
     }
     
     // MARK: - Layout Views
     @ViewBuilder
-    private var portraitLayout: some View {
-        VStack(spacing: 0) {
-            // Completed Count View
+    private func portraitLayout(geometry: GeometryProxy) -> some View {
+            VStack(spacing: 0) {
+                // Completed Count View
             CompletedCountView(
                 completedCount: viewModel.completedCountToday,
                 hourlyData: viewModel.hourlyCompletedCounts(for: Date()),
                 hourlyColors: viewModel.hourlyColorsForToday
             )
-                .padding(.top, 60)
-                .padding(.horizontal, 24)
+                    .padding(.top, 60)
+                    .padding(.horizontal, 24)
                 .onTapGesture {
                     HapticsManager.shared.lightImpact()
-                    showingStatistics = true
+                    navigateTo(.statistics)
                 }
+                
+                Spacer()
             
-            Spacer()
-            
-            // Circular Dial View
-            CircularDialView(viewModel: viewModel)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            Spacer()
-            
-            // Bottom Controls
-            BottomControlsView(viewModel: viewModel)
-                .padding(.bottom, 50)
-                .padding(.horizontal, 24)
+            // タスク名表示
+            VStack(spacing: 16) {
+                if !viewModel.currentTaskName.isEmpty {
+                    Text(viewModel.currentTaskName)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(viewModel.currentTaskCategoryColor)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.horizontal, 24)
+                } else {
+                    Text("タスクを選択してください")
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.horizontal, 24)
+                }
+                
+                // Circular Dial View
+                CircularDialView(viewModel: viewModel)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+                
+                Spacer()
+                
+                // Bottom Controls
+                BottomControlsView(viewModel: viewModel)
+                    .padding(.bottom, 50)
+                    .padding(.horizontal, 24)
+            }
         }
-    }
     
+    // MARK: - Apple公式推奨の横置きレイアウト
     @ViewBuilder
     private func landscapeLayout(geometry: GeometryProxy) -> some View {
-        HStack(spacing: 30) {
-            // 左側: ポモドーロ数のドット（縦に並べる）
+        // 横置きレイアウト（Apple公式推奨の実装）
+        HStack(spacing: 0) {
+            // 左側: ポモドーロ数のドットと統計
             VStack(spacing: 16) {
                 Spacer()
                 CompletedCountView(
@@ -323,25 +398,50 @@ struct ContentView: View {
                 )
                     .onTapGesture {
                         HapticsManager.shared.lightImpact()
-                        showingStatistics = true
+                        navigateTo(.statistics)
                     }
                 Spacer()
             }
-            .frame(width: geometry.size.width * 0.2)
+            .frame(width: geometry.size.width * 0.25)
+            .padding(.leading, 20)
             
-            // 中央: プログレス円（より大きく表示）
-            CircularDialView(viewModel: viewModel)
-                .frame(width: geometry.size.height * 0.9, height: geometry.size.height * 0.9)
+            // 中央: プログレス円とタスク名
+            VStack(spacing: 20) {
+                // タスク名表示
+                if !viewModel.currentTaskName.isEmpty {
+                    Text(viewModel.currentTaskName)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(viewModel.currentTaskCategoryColor)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.horizontal, 24)
+                } else {
+                    Text("タスクを選択してください")
+                        .font(.title3)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .padding(.horizontal, 24)
+                }
+                
+                // プログレス円
+                CircularDialView(viewModel: viewModel)
+                    .frame(width: geometry.size.height * 0.85, height: geometry.size.height * 0.85)
+            }
+            .frame(maxWidth: .infinity)
             
-            // 右側: タイマー開始/停止ボタン（縦に並べる）
+            // 右側: タイマーコントロールボタン
             VStack(spacing: 16) {
                 Spacer()
+                
                 BottomControlsView(viewModel: viewModel)
                 Spacer()
             }
-            .frame(width: geometry.size.width * 0.2)
+            .frame(width: geometry.size.width * 0.25)
+            .padding(.trailing, 20)
         }
-        .padding(.horizontal, 30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
@@ -355,12 +455,18 @@ struct ContentView: View {
                     taskManagerOffset: $taskManagerOffset,
                     onTaskSelected: { task, category in
                         viewModel.setCurrentTask(name: task.name, estimatedMinutes: task.estimatedMinutes, categoryColor: category.color)
+                        // カテゴリの色を更新
+                        viewModel.updateCurrentTaskCategoryColor(category.color)
+                        print("✅ Hiding Task Manager after task selection")
                         showingTaskManager = false
                         taskManagerOffset = 0
-                        print("Selected task: \(task.name) from category: \(category.name)")
+                        print("✅ Selected task: \(task.name) from category: \(category.name)")
                     }
                 )
                 .transition(.move(edge: .leading))
+                .onAppear {
+                    print("🔄 Task Manager Overlay - showing: \(showingTaskManager)")
+                }
             }
         }
     }
@@ -368,94 +474,123 @@ struct ContentView: View {
     // MARK: - Right Menu Overlay
     @ViewBuilder
     private var rightMenuOverlay: some View {
-        if showingRightMenu {
-            ZStack {
-                // 背景の半透明オーバーレイ
-                Color.black.opacity(0.3)
-                    .ignoresSafeArea()
-                    .onTapGesture {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            showingRightMenu = false
-                            rightMenuOffset = 0
-                        }
+        Group {
+            if showingRightMenu {
+                RightMenuOverlay(
+                    onSettingsTapped: {
+                        print("⚙️ Settings tapped, hiding right menu")
+                        HapticsManager.shared.lightImpact()
+                        showingRightMenu = false
+                        rightMenuOffset = 0
+                        navigateTo(.settings)
+                    },
+                    onStatisticsTapped: {
+                        print("📊 Statistics tapped, hiding right menu")
+                        HapticsManager.shared.lightImpact()
+                        showingRightMenu = false
+                        rightMenuOffset = 0
+                        navigateTo(.statistics)
+                    },
+                    onTaskManagementTapped: {
+                        print("📋 Task Management tapped, hiding right menu")
+                        HapticsManager.shared.lightImpact()
+                        showingRightMenu = false
+                        rightMenuOffset = 0
+                        navigateTo(.taskManagement)
+                    },
+                    onClose: {
+                        print("❌ Close button tapped, hiding right menu")
+                        HapticsManager.shared.lightImpact()
+                        showingRightMenu = false
+                        rightMenuOffset = 0
                     }
-                
-                // 右側メニュー
-                HStack {
-                    Spacer()
-                    
-                    RightMenuOverlay(
-                        onSettingsTapped: {
-                            showingRightMenu = false
-                            rightMenuOffset = 0
-                            showingSettings = true
-                        },
-                        onStatisticsTapped: {
-                            showingRightMenu = false
-                            rightMenuOffset = 0
-                            showingStatistics = true
-                        }
-                    )
-                    .transition(.move(edge: .trailing))
+                )
+                .offset(x: rightMenuOffset)
+                .transition(.move(edge: .trailing))
+                .onAppear {
+                    print("🔄 Right Menu Overlay - showing: \(showingRightMenu)")
                 }
             }
         }
     }
     
-    private var swipeGesture: some Gesture {
+        private var swipeGesture: some Gesture {
         DragGesture()
             .onChanged { value in
-                // 左から右へのスワイプでタスク管理
-                if value.translation.width > 0 && abs(value.translation.width) > 50 {
-                    // 右側メニューが表示されている場合はタスク管理を表示しない
-                    if !showingRightMenu {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            showingTaskManager = true
-                            taskManagerOffset = value.translation.width
-                        }
-                    }
-                }
-                // 右から左へのスワイプで右側メニュー
-                if value.translation.width < 0 && abs(value.translation.width) > 50 {
-                    // タスク管理が表示されている場合は右側メニューを表示しない
-                    if !showingTaskManager {
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            showingRightMenu = true
-                            rightMenuOffset = abs(value.translation.width)
-                        }
-                    }
+                // Apple公式推奨: onChangedでは視覚的フィードバックのみ
+                // ドラッグ中のオフセット値を更新（状態変更なし）
+                print("🔄 Swipe onChanged - translation: \(value.translation.width), showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
+                
+                if value.translation.width > 0 {
+                    taskManagerOffset = value.translation.width
+                } else if value.translation.width < 0 {
+                    rightMenuOffset = abs(value.translation.width)
                 }
             }
             .onEnded { value in
+                // Apple公式推奨: onEndedで実際の状態変更
+                print("🎯 Swipe onEnded - translation: \(value.translation.width), threshold: 100")
+                print("📊 Before state - showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
+                
                 if value.translation.width > 100 {
                     // 左から右へのスワイプでタスク管理を表示
-                    // 右側メニューが表示されている場合はタスク管理を表示しない
                     if !showingRightMenu {
+                        print("✅ Showing Task Manager (left swipe)")
                         withAnimation(.easeOut(duration: 0.3)) {
+                            HapticsManager.shared.lightImpact()
                             showingTaskManager = true
                             taskManagerOffset = 0
+                            // 右側メニューを確実に非表示
+                            showingRightMenu = false
+                            rightMenuOffset = 0
                         }
+                    } else {
+                        print("⚠️ Right menu is already showing, cannot show task manager")
                     }
                 } else if value.translation.width < -100 {
                     // 右から左へのスワイプで右側メニューを表示
-                    // タスク管理が表示されている場合は右側メニューを表示しない
                     if !showingTaskManager {
+                        print("✅ Showing Right Menu (right swipe)")
                         withAnimation(.easeOut(duration: 0.3)) {
                             HapticsManager.shared.lightImpact()
                             showingRightMenu = true
                             rightMenuOffset = 0
+                            // タスク管理を確実に非表示
+                            showingTaskManager = false
+                            taskManagerOffset = 0
                         }
+                    } else {
+                        print("⚠️ Task manager is already showing, cannot show right menu")
                     }
                 } else {
                     // スワイプが不十分な場合は非表示
+                    print("❌ Insufficient swipe, hiding both menus")
                     withAnimation(.easeOut(duration: 0.3)) {
+                        HapticsManager.shared.lightImpact()
                         showingTaskManager = false
                         taskManagerOffset = 0
                         showingRightMenu = false
                         rightMenuOffset = 0
                     }
                 }
+                
+                print("📊 After state - showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
             }
+    }
+    
+    // MARK: - Computed Properties for Landscape Control
+    @ViewBuilder
+    private var landscapeOverlay: some View {
+        // 縦横置き時ともにオーバーレイを表示
+        HStack {
+            // 左側: タスク管理メニュー
+            taskManagerOverlay
+            
+            Spacer()
+            
+            // 右側: 右側メニュー
+            rightMenuOverlay
+        }
     }
 }
 
@@ -483,23 +618,23 @@ struct CompletedCountView: View {
         Group {
             if horizontalSizeClass == .compact {
                 // 縦置きモード（横並び）
-                HStack(spacing: 8) {
-                    ForEach(0..<min(completedCount, 10), id: \.self) { index in
+        HStack(spacing: 8) {
+            ForEach(0..<min(completedCount, 10), id: \.self) { index in
                         let dotColor = index < completedColors.count ? completedColors[index] : DesignSystem.Colors.neonBlue
-                        Circle()
+                Circle()
                             .fill(dotColor)
-                            .frame(width: 12, height: 12)
-                            .opacity(0.9)
-                            .shadow(
+                        .frame(width: 12, height: 12)
+                        .opacity(0.9)
+                        .shadow(
                                 color: dotColor.opacity(0.6),
-                                radius: 2,
-                                x: 0,
-                                y: 0
-                            )
-                    }
-                    
-                    if completedCount > 10 {
-                        Text("+\(completedCount - 10)")
+                            radius: 2,
+                            x: 0,
+                            y: 0
+                        )
+                }
+                
+                if completedCount > 10 {
+                    Text("+\(completedCount - 10)")
                             .font(.caption)
                             .foregroundColor(Color.white.opacity(0.7))
                     }
@@ -626,6 +761,7 @@ struct TaskManagerOverlay: View {
                         .onEnded { value in
                             if value.translation.width < -geometry.size.width * 0.3 {
                                 withAnimation(.easeOut(duration: 0.3)) {
+                                    HapticsManager.shared.lightImpact()
                                     showingTaskManager = false
                                     taskManagerOffset = 0
                                 }
@@ -818,36 +954,36 @@ struct TaskCard: View {
             }
             
             // タスク情報
-            Button(action: onTap) {
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(task.name)
-                            .headlineStyle()
-                            .primaryText()
+        Button(action: onTap) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(task.name)
+                        .headlineStyle()
+                        .primaryText()
                             .strikethrough(task.isCompleted)
                             .opacity(task.isCompleted ? 0.6 : 1.0)
-                        
-                        Text(task.description)
-                            .subheadlineStyle()
-                            .secondaryText()
+                    
+                    Text(task.description)
+                        .subheadlineStyle()
+                        .secondaryText()
                             .opacity(task.isCompleted ? 0.6 : 1.0)
+                    
+                    HStack(spacing: 12) {
+                        Label("\(task.estimatedMinutes)分", systemImage: "clock")
+                            .captionStyle()
+                            .secondaryText()
                         
-                        HStack(spacing: 12) {
-                            Label("\(task.estimatedMinutes)分", systemImage: "clock")
-                                .captionStyle()
-                                .secondaryText()
-                            
-                            Label(task.priority.rawValue, systemImage: "flag.fill")
-                                .captionStyle()
-                                .foregroundColor(task.priority.color)
-                        }
+                        Label(task.priority.rawValue, systemImage: "flag.fill")
+                            .captionStyle()
+                            .foregroundColor(task.priority.color)
                     }
-                    
-                    Spacer()
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(Color.white.opacity(0.5))
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(Color.white.opacity(0.5))
                 }
             }
             .buttonStyle(PlainButtonStyle())
@@ -874,11 +1010,11 @@ struct TaskCard: View {
                     }
                 }
             }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         .background(Color.white.opacity(task.isCompleted ? 0.02 : 0.05))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
@@ -943,57 +1079,88 @@ struct BreakSheetView: View {
 struct RightMenuOverlay: View {
     let onSettingsTapped: () -> Void
     let onStatisticsTapped: () -> Void
+    let onTaskManagementTapped: () -> Void
+    let onClose: () -> Void
     
     var body: some View {
-        VStack(spacing: 0) {
-            // ヘッダー
-            VStack(spacing: 16) {
+        HStack(spacing: 0) {
+            Spacer()
+            
+            // メインコンテンツ
+            VStack(spacing: 0) {
+                // ヘッダー
                 HStack {
-                    Spacer()
                     Text("メニュー")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                        .title2Style()
+                        .primaryText()
+                    
                     Spacer()
+                    
+                    Button(action: onClose) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
+                .padding(.horizontal, 24)
+                .padding(.top, 20)
+                .padding(.bottom, 16)
+                
+                Divider()
+                    .background(Color.gray.opacity(0.3))
+                
+                // メニューアイテム
+                VStack(spacing: 0) {
+                    // 設定
+                    MenuItem(
+                        icon: "gearshape.fill",
+                        title: "設定",
+                        color: .blue
+                    ) {
+                        print("🔧 Settings MenuItem tapped!")
+                        HapticsManager.shared.lightImpact()
+                        onSettingsTapped()
+                    }
+                    
+                    Divider()
+                        .background(Color.gray.opacity(0.3))
+                    
+                    // 統計
+                    MenuItem(
+                        icon: "chart.bar.fill",
+                        title: "統計",
+                        color: .green
+                    ) {
+                        print("📊 Statistics MenuItem tapped!")
+                        HapticsManager.shared.lightImpact()
+                        onStatisticsTapped()
+                    }
+                    
+                    Divider()
+                        .background(Color.gray.opacity(0.3))
+                    
+                    // タスク管理
+                    MenuItem(
+                        icon: "list.bullet",
+                        title: "タスク管理",
+                        color: .orange
+                    ) {
+                        print("📋 Task Management MenuItem tapped!")
+                        HapticsManager.shared.lightImpact()
+                        onTaskManagementTapped()
+                    }
+                }
+                .padding(.horizontal, 24)
                 .padding(.top, 20)
                 
-                Divider()
-                    .background(Color.gray.opacity(0.3))
+                Spacer()
             }
-            
-            // メニューアイテム
-            VStack(spacing: 0) {
-                // 設定
-                MenuItem(
-                    icon: "gearshape.fill",
-                    title: "設定",
-                    color: .blue
-                ) {
-                    HapticsManager.shared.lightImpact()
-                    onSettingsTapped()
-                }
-                
-                Divider()
-                    .background(Color.gray.opacity(0.3))
-                
-                // 統計
-                MenuItem(
-                    icon: "chart.bar.fill",
-                    title: "統計",
-                    color: .green
-                ) {
-                    HapticsManager.shared.lightImpact()
-                    onStatisticsTapped()
-                }
-            }
-            
-            Spacer()
+            .frame(width: 300)
+            .background(DesignSystem.Colors.background)
+            .cornerRadius(DesignSystem.Layout.cornerRadius)
+            .shadow(radius: 10)
         }
-        .frame(width: 280)
-        .background(Color(.systemBackground))
-        .cornerRadius(16, corners: [.topLeft, .bottomLeft])
-        .shadow(color: .black.opacity(0.2), radius: 10, x: -5, y: 0)
     }
 }
 
@@ -1005,7 +1172,10 @@ struct MenuItem: View {
     let action: () -> Void
     
     var body: some View {
-        Button(action: action) {
+        Button(action: {
+            print("🎯 MenuItem Button tapped for: \(title)")
+            action()
+        }) {
             HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.title2)
@@ -1048,25 +1218,6 @@ struct RoundedCorner: Shape {
             cornerRadii: CGSize(width: radius, height: radius)
         )
         return Path(path.cgPath)
-    }
-}
-
-// MARK: - Device Orientation Detection
-struct DeviceRotationViewModifier: ViewModifier {
-    let action: (UIDeviceOrientation) -> Void
-
-    func body(content: Content) -> some View {
-        content
-            .onAppear()
-            .onReceive(NotificationCenter.default.publisher(for: UIDevice.orientationDidChangeNotification)) { _ in
-                action(UIDevice.current.orientation)
-            }
-    }
-}
-
-extension View {
-    func onRotate(perform action: @escaping (UIDeviceOrientation) -> Void) -> some View {
-        self.modifier(DeviceRotationViewModifier(action: action))
     }
 }
 

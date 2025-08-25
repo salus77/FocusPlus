@@ -36,6 +36,10 @@ struct BottomControlsView: View {
                             .frame(width: 80, height: 80)
                             .background(buttonBackgroundColor)
                             .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(viewModel.currentTaskCategoryColor.opacity(0.3), lineWidth: 2)
+                            )
                     }
                     .disabled(viewModel.state == .finished) // Disabled when finished
                     .accessibilityLabel(viewModel.state == .running ? "一時停止" : "開始")
@@ -54,22 +58,22 @@ struct BottomControlsView: View {
                     .accessibilityLabel("スキップ")
                 }
             } else {
-                // 横置きモード（縦並び）
-                VStack(spacing: 20) {
-                    // リセットボタン
+                // 横置きモード（縦並び）- 「早送り」「再生」「リセット」の順
+                VStack(spacing: 24) {
+                    // スキップボタン（早送り）
                     Button(action: {
-                        viewModel.reset()
+                        viewModel.skip()
                     }) {
-                        Image(systemName: "arrow.clockwise")
+                        Image(systemName: "forward.fill")
                             .font(.title2)
                             .foregroundColor(.white)
-                            .frame(width: 60, height: 60)
+                            .frame(width: 70, height: 70)
                             .background(Color.white.opacity(0.1))
                             .clipShape(Circle())
                     }
-                    .accessibilityLabel("リセット")
+                    .accessibilityLabel("スキップ")
                     
-                    // 開始/一時停止ボタン
+                    // 開始/一時停止ボタン（再生）
                     Button(action: {
                         if viewModel.state == .running {
                             viewModel.pause()
@@ -80,25 +84,29 @@ struct BottomControlsView: View {
                         Image(systemName: viewModel.state == .running ? "pause.fill" : "play.fill")
                             .font(.title)
                             .foregroundColor(buttonColor)
-                            .frame(width: 80, height: 80)
+                            .frame(width: 90, height: 90)
                             .background(buttonBackgroundColor)
                             .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(viewModel.currentTaskCategoryColor.opacity(0.3), lineWidth: 2)
+                            )
                     }
                     .disabled(viewModel.state == .finished) // Disabled when finished
                     .accessibilityLabel(viewModel.state == .running ? "一時停止" : "開始")
                     
-                    // スキップボタン
+                    // リセットボタン
                     Button(action: {
-                        viewModel.skip()
+                        viewModel.reset()
                     }) {
-                        Image(systemName: "forward.fill")
+                        Image(systemName: "arrow.clockwise")
                             .font(.title2)
                             .foregroundColor(.white)
-                            .frame(width: 60, height: 60)
+                            .frame(width: 70, height: 70)
                             .background(Color.white.opacity(0.1))
                             .clipShape(Circle())
                     }
-                    .accessibilityLabel("スキップ")
+                    .accessibilityLabel("リセット")
                 }
             }
         }
@@ -109,7 +117,7 @@ struct BottomControlsView: View {
         case .finished:
             return .gray // Gray color when finished
         default:
-            return .white
+            return viewModel.currentTaskCategoryColor
         }
     }
     
@@ -118,9 +126,9 @@ struct BottomControlsView: View {
         case .finished:
             return Color.gray.opacity(0.3) // Gray background when finished
         case .running:
-            return Color.orange // Orange for pause button
+            return viewModel.currentTaskCategoryColor.opacity(0.2) // カテゴリ色の薄い背景
         default:
-            return DesignSystem.Colors.neonBlue
+            return viewModel.currentTaskCategoryColor.opacity(0.3) // カテゴリ色の背景
         }
     }
 }

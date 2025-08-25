@@ -1,3 +1,10 @@
+//
+//  FocusPlusWidget.swift
+//  FocusPlusWidget
+//
+//  Created by Yasutaka Otsubo on 2025/08/24.
+//
+
 import WidgetKit
 import SwiftUI
 
@@ -16,17 +23,16 @@ struct Provider: TimelineProvider {
         let currentDate = Date()
         let nextUpdate = Calendar.current.date(byAdding: .minute, value: 30, to: currentDate) ?? currentDate
         
+        // App Groupsからデータを取得
         let userDefaults = UserDefaults(suiteName: "group.com.delmar.FocusPlus")
         let completedCount = userDefaults?.integer(forKey: "completedCountToday") ?? 0
-        let totalMinutes = completedCount * 25
+        let totalMinutes = completedCount * 25 // 25分 × 完了数
         
         // カテゴリ別統計を取得
         var categoryStats: [String: Int] = [:]
-        if let data = userDefaults?.data(forKey: "hourlyCompletedCounts"),
-           let hourlyData = try? JSONDecoder().decode([Int: Int].self, from: data) {
-            // 時間ごとのデータからカテゴリ別統計を計算
-            // 実際の実装では、カテゴリ別データを直接保存・取得する
-            categoryStats = ["仕事": max(0, completedCount - 2), "勉強": max(0, completedCount - 3)]
+        if let data = userDefaults?.data(forKey: "categoryStatistics"),
+           let stats = try? JSONDecoder().decode([String: Int].self, from: data) {
+            categoryStats = stats
         }
         
         let entry = SimpleEntry(
@@ -48,10 +54,10 @@ struct SimpleEntry: TimelineEntry {
     let categoryStats: [String: Int]
 }
 
-struct FocusPlusWidgetEntryView : View {
+struct FocusPlusWidgetEntryView: View {
     var entry: Provider.Entry
     @Environment(\.widgetFamily) var family
-    
+
     var body: some View {
         switch family {
         case .systemSmall:
@@ -66,244 +72,137 @@ struct FocusPlusWidgetEntryView : View {
     }
 }
 
-// MARK: - Small Widget (小サイズ)
 struct SmallWidgetView: View {
-    let entry: SimpleEntry
+    let entry: Provider.Entry
     
     var body: some View {
         VStack(spacing: 8) {
-            // ヘッダー
-            HStack {
-                Image(systemName: "timer")
-                    .font(.caption)
-                    .foregroundColor(.orange)
-                Text("今日の成果")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                Spacer()
-            }
+            Text("今日の完了")
+                .font(.caption)
+                .foregroundColor(.secondary)
             
-            Spacer()
+            Text("\(entry.completedCount)")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(.primary)
             
-            // メイン情報
-            VStack(spacing: 4) {
-                Text("\(entry.completedCount)")
-                    .font(.system(size: 32, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-                
-                Text("ポモドーロ")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                
-                Text("\(entry.totalMinutes)分")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.orange)
-            }
-            
-            Spacer()
+            Text("\(entry.totalMinutes)分")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
-        .padding(16)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
     }
 }
 
-// MARK: - Medium Widget (中サイズ)
 struct MediumWidgetView: View {
-    let entry: SimpleEntry
+    let entry: Provider.Entry
     
     var body: some View {
         HStack(spacing: 16) {
-            // 左側: 基本情報
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Image(systemName: "timer")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                    Text("今日の成果")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                    Spacer()
-                }
+            // 左側：基本統計
+            VStack(spacing: 8) {
+                Text("完了")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 
-                Spacer()
+                Text("\(entry.completedCount)")
+                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                    .foregroundColor(.primary)
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(entry.completedCount)")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                    
-                    Text("ポモドーロ完了")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Text("合計 \(entry.totalMinutes)分")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.orange)
-                }
-                
-                Spacer()
+                Text("\(entry.totalMinutes)分")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
-            // 右側: カテゴリ別統計（簡易版）
-            if !entry.categoryStats.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("カテゴリ別")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .foregroundColor(.secondary)
-                    
-                    ForEach(Array(entry.categoryStats.prefix(3)), id: \.key) { category, count in
-                        HStack {
-                            Circle()
-                                .fill(categoryColor(for: category))
-                                .frame(width: 8, height: 8)
-                            Text(category)
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text("\(count)")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                        }
+            Divider()
+            
+            // 右側：カテゴリ別統計
+            VStack(alignment: .leading, spacing: 4) {
+                Text("カテゴリ別")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                ForEach(Array(entry.categoryStats.prefix(3)), id: \.key) { category, count in
+                    HStack {
+                        Text(category)
+                            .font(.caption2)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text("\(count)")
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
                     }
-                    
-                    Spacer()
                 }
             }
         }
-        .padding(16)
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
-    }
-    
-    private func categoryColor(for category: String) -> Color {
-        switch category {
-        case "仕事": return .blue
-        case "勉強": return .green
-        case "運動": return .orange
-        default: return .gray
-        }
     }
 }
 
-// MARK: - Large Widget (大サイズ)
 struct LargeWidgetView: View {
-    let entry: SimpleEntry
+    let entry: Provider.Entry
     
     var body: some View {
         VStack(spacing: 16) {
             // ヘッダー
             HStack {
-                Image(systemName: "timer")
-                    .font(.title3)
-                    .foregroundColor(.orange)
-                Text("今日のポモドーロ統計")
+                Text("FocusPlus")
                     .font(.headline)
-                    .fontWeight(.medium)
+                    .fontWeight(.bold)
                 Spacer()
+                Text(Date(), style: .time)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
-            // メイン統計
+            // 基本統計
             HStack(spacing: 24) {
-                VStack(spacing: 8) {
-                    Text("\(entry.completedCount)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
+                VStack {
                     Text("完了数")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    Text("\(entry.completedCount)")
+                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
                 }
                 
-                VStack(spacing: 8) {
-                    Text("\(entry.totalMinutes)")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(.orange)
-                    Text("合計時間(分)"
+                VStack {
+                    Text("合計時間")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    Text("\(entry.totalMinutes)分")
+                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                        .foregroundColor(.primary)
                 }
             }
             
-            // カテゴリ別円グラフ
-            if !entry.categoryStats.isEmpty {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("カテゴリ別統計")
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                    
-                    HStack(spacing: 20) {
-                        // 簡易円グラフ
-                        ZStack {
-                            Circle()
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 8)
-                                .frame(width: 60, height: 60)
-                            
-                            Circle()
-                                .trim(from: 0, to: min(1.0, Double(entry.completedCount) / max(1, entry.completedCount)))
-                                .stroke(Color.orange, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                                .frame(width: 60, height: 60)
-                                .rotationEffect(.degrees(-90))
-                        }
-                        
-                        // カテゴリ詳細
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(Array(entry.categoryStats.prefix(4)), id: \.key) { category, count in
-                                HStack {
-                                    Circle()
-                                        .fill(categoryColor(for: category))
-                                        .frame(width: 10, height: 10)
-                                    Text(category)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                    Spacer()
-                                    Text("\(count)")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // 時間別積み上げグラフ
+            // カテゴリ別統計
             VStack(alignment: .leading, spacing: 8) {
-                Text("時間別完了数")
+                Text("カテゴリ別完了数")
                     .font(.subheadline)
-                    .fontWeight(.medium)
+                    .fontWeight(.semibold)
                 
-                HStack(spacing: 2) {
-                    ForEach(0..<24, id: \.self) { hour in
-                        VStack(spacing: 2) {
-                            // 簡易積み上げグラフ
-                            Rectangle()
-                                .fill(Color.orange.opacity(0.6))
-                                .frame(width: 8, height: max(4, CGFloat(min(entry.completedCount, 8))))
-                            
-                            if hour % 6 == 0 {
-                                Text("\(hour)")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
+                ForEach(Array(entry.categoryStats.sorted(by: { $0.value > $1.value })), id: \.key) { category, count in
+                    HStack {
+                        Text(category)
+                            .font(.caption)
+                        Spacer()
+                        Text("\(count)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.blue)
                     }
                 }
             }
             
             Spacer()
         }
-        .padding(20)
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
-    }
-    
-    private func categoryColor(for category: String) -> Color {
-        switch category {
-        case "仕事": return .blue
-        case "勉強": return .green
-        case "運動": return .orange
-        default: return .gray
-        }
     }
 }
 
@@ -312,7 +211,14 @@ struct FocusPlusWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: Provider()) { entry in
-            FocusPlusWidgetEntryView(entry: entry)
+            if #available(iOS 17.0, *) {
+                FocusPlusWidgetEntryView(entry: entry)
+                    .containerBackground(.fill.tertiary, for: .widget)
+            } else {
+                FocusPlusWidgetEntryView(entry: entry)
+                    .padding()
+                    .background()
+            }
         }
         .configurationDisplayName("FocusPlus")
         .description("今日のポモドーロ統計を表示します")
@@ -324,25 +230,25 @@ struct FocusPlusWidget_Previews: PreviewProvider {
     static var previews: some View {
         FocusPlusWidgetEntryView(entry: SimpleEntry(
             date: Date(),
-            completedCount: 8,
-            totalMinutes: 200,
-            categoryStats: ["仕事": 5, "勉強": 3]
+            completedCount: 5,
+            totalMinutes: 125,
+            categoryStats: ["仕事": 3, "勉強": 2]
         ))
         .previewContext(WidgetPreviewContext(family: .systemSmall))
         
         FocusPlusWidgetEntryView(entry: SimpleEntry(
             date: Date(),
-            completedCount: 8,
-            totalMinutes: 200,
-            categoryStats: ["仕事": 5, "勉強": 3]
+            completedCount: 5,
+            totalMinutes: 125,
+            categoryStats: ["仕事": 3, "勉強": 2]
         ))
         .previewContext(WidgetPreviewContext(family: .systemMedium))
         
         FocusPlusWidgetEntryView(entry: SimpleEntry(
             date: Date(),
-            completedCount: 8,
-            totalMinutes: 200,
-            categoryStats: ["仕事": 5, "勉強": 3]
+            completedCount: 5,
+            totalMinutes: 125,
+            categoryStats: ["仕事": 3, "勉強": 2]
         ))
         .previewContext(WidgetPreviewContext(family: .systemLarge))
     }

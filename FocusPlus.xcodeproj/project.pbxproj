@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		CBAC72BF2E5B576900234EA8 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CBAC72BE2E5B576900234EA8 /* WidgetKit.framework */; };
+		CBAC72C12E5B576900234EA8 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CBAC72C02E5B576900234EA8 /* SwiftUI.framework */; };
+		CBAC72D02E5B576B00234EA8 /* FocusPlusWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CBAC72BC2E5B576900234EA8 /* FocusPlusWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		CB32C5F62E57E1F4006FFB48 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,13 +27,48 @@
 			remoteGlobalIDString = CB32C5DF2E57E1F2006FFB48;
 			remoteInfo = FocusPlus;
 		};
+		CBAC72CE2E5B576B00234EA8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CB32C5D82E57E1F2006FFB48 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = CBAC72BB2E5B576900234EA8;
+			remoteInfo = FocusPlusWidgetExtension;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		CBAC72D12E5B576B00234EA8 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				CBAC72D02E5B576B00234EA8 /* FocusPlusWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		CB32C5E02E57E1F2006FFB48 /* FocusPlus.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FocusPlus.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB32C5F52E57E1F4006FFB48 /* FocusPlusTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FocusPlusTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		CB32C5FF2E57E1F5006FFB48 /* FocusPlusUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FocusPlusUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBAC72BC2E5B576900234EA8 /* FocusPlusWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = FocusPlusWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CBAC72BE2E5B576900234EA8 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		CBAC72C02E5B576900234EA8 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CBAC72D42E5B576B00234EA8 /* Exceptions for "FocusPlusWidget" folder in "FocusPlusWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CBAC72BB2E5B576900234EA8 /* FocusPlusWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CB32C5E22E57E1F2006FFB48 /* FocusPlus */ = {
@@ -43,6 +84,14 @@
 		CB32C6022E57E1F5006FFB48 /* FocusPlusUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = FocusPlusUITests;
+			sourceTree = "<group>";
+		};
+		CBAC72C22E5B576900234EA8 /* FocusPlusWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CBAC72D42E5B576B00234EA8 /* Exceptions for "FocusPlusWidget" folder in "FocusPlusWidgetExtension" target */,
+			);
+			path = FocusPlusWidget;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -69,6 +118,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CBAC72B92E5B576900234EA8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CBAC72C12E5B576900234EA8 /* SwiftUI.framework in Frameworks */,
+				CBAC72BF2E5B576900234EA8 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -78,6 +136,8 @@
 				CB32C5E22E57E1F2006FFB48 /* FocusPlus */,
 				CB32C5F82E57E1F4006FFB48 /* FocusPlusTests */,
 				CB32C6022E57E1F5006FFB48 /* FocusPlusUITests */,
+				CBAC72C22E5B576900234EA8 /* FocusPlusWidget */,
+				CBAC72BD2E5B576900234EA8 /* Frameworks */,
 				CB32C5E12E57E1F2006FFB48 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,8 +148,18 @@
 				CB32C5E02E57E1F2006FFB48 /* FocusPlus.app */,
 				CB32C5F52E57E1F4006FFB48 /* FocusPlusTests.xctest */,
 				CB32C5FF2E57E1F5006FFB48 /* FocusPlusUITests.xctest */,
+				CBAC72BC2E5B576900234EA8 /* FocusPlusWidgetExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CBAC72BD2E5B576900234EA8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				CBAC72BE2E5B576900234EA8 /* WidgetKit.framework */,
+				CBAC72C02E5B576900234EA8 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,10 +172,12 @@
 				CB32C5DC2E57E1F2006FFB48 /* Sources */,
 				CB32C5DD2E57E1F2006FFB48 /* Frameworks */,
 				CB32C5DE2E57E1F2006FFB48 /* Resources */,
+				CBAC72D12E5B576B00234EA8 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				CBAC72CF2E5B576B00234EA8 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				CB32C5E22E57E1F2006FFB48 /* FocusPlus */,
@@ -163,6 +235,28 @@
 			productReference = CB32C5FF2E57E1F5006FFB48 /* FocusPlusUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		CBAC72BB2E5B576900234EA8 /* FocusPlusWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBAC72D52E5B576B00234EA8 /* Build configuration list for PBXNativeTarget "FocusPlusWidgetExtension" */;
+			buildPhases = (
+				CBAC72B82E5B576900234EA8 /* Sources */,
+				CBAC72B92E5B576900234EA8 /* Frameworks */,
+				CBAC72BA2E5B576900234EA8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				CBAC72C22E5B576900234EA8 /* FocusPlusWidget */,
+			);
+			name = FocusPlusWidgetExtension;
+			packageProductDependencies = (
+			);
+			productName = FocusPlusWidgetExtension;
+			productReference = CBAC72BC2E5B576900234EA8 /* FocusPlusWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -184,6 +278,9 @@
 						CreatedOnToolsVersion = 16.2;
 						TestTargetID = CB32C5DF2E57E1F2006FFB48;
 					};
+					CBAC72BB2E5B576900234EA8 = {
+						CreatedOnToolsVersion = 16.2;
+					};
 				};
 			};
 			buildConfigurationList = CB32C5DB2E57E1F2006FFB48 /* Build configuration list for PBXProject "FocusPlus" */;
@@ -203,6 +300,7 @@
 				CB32C5DF2E57E1F2006FFB48 /* FocusPlus */,
 				CB32C5F42E57E1F4006FFB48 /* FocusPlusTests */,
 				CB32C5FE2E57E1F5006FFB48 /* FocusPlusUITests */,
+				CBAC72BB2E5B576900234EA8 /* FocusPlusWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -223,6 +321,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		CB32C5FD2E57E1F5006FFB48 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CBAC72BA2E5B576900234EA8 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -253,6 +358,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		CBAC72B82E5B576900234EA8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -265,6 +377,11 @@
 			isa = PBXTargetDependency;
 			target = CB32C5DF2E57E1F2006FFB48 /* FocusPlus */;
 			targetProxy = CB32C6002E57E1F5006FFB48 /* PBXContainerItemProxy */;
+		};
+		CBAC72CF2E5B576B00234EA8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = CBAC72BB2E5B576900234EA8 /* FocusPlusWidgetExtension */;
+			targetProxy = CBAC72CE2E5B576B00234EA8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -393,6 +510,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FocusPlus/FocusPlus.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FocusPlus/Preview Content\"";
@@ -422,6 +540,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FocusPlus/FocusPlus.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"FocusPlus/Preview Content\"";
@@ -518,6 +637,60 @@
 			};
 			name = Release;
 		};
+		CBAC72D22E5B576B00234EA8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z2MGX9K6L6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusPlusWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FocusPlusWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.delmar.FocusPlus.FocusPlusWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CBAC72D32E5B576B00234EA8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = Z2MGX9K6L6;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusPlusWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = FocusPlusWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.delmar.FocusPlus.FocusPlusWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -553,6 +726,15 @@
 			buildConfigurations = (
 				CB32C6102E57E1F5006FFB48 /* Debug */,
 				CB32C6112E57E1F5006FFB48 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		CBAC72D52E5B576B00234EA8 /* Build configuration list for PBXNativeTarget "FocusPlusWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CBAC72D22E5B576B00234EA8 /* Debug */,
+				CBAC72D32E5B576B00234EA8 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

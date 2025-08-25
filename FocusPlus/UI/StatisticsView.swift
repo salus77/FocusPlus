@@ -4,24 +4,24 @@ struct StatisticsView: View {
     @ObservedObject var viewModel: TimerViewModel
     @Binding var isPresented: Bool
     @Environment(\.dismiss) private var dismiss
-
+    
     
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
+                ScrollView {
+                    VStack(spacing: 24) {
                 // Calendar Section
                 VStack(spacing: 16) {
                     Text("カレンダー")
-                        .subheadlineStyle()
-                        .secondaryText()
-                    
+                                .subheadlineStyle()
+                                .secondaryText()
+                            
                     CalendarView(viewModel: viewModel)
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
-                .background(Color.white.opacity(0.05))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(Color.white.opacity(0.05))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        
                 // Hourly Pomodoro Graph
                 HourlyPomodoroGraphView(
                     hourlyData: viewModel.hourlyCompletedCountsForSelectedDate,
@@ -32,26 +32,26 @@ struct StatisticsView: View {
                 .padding(.vertical, 16)
                 .background(Color.white.opacity(0.05))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
-                
-                // Selected Date Statistics
-                StatCard(
+                        
+                        // Selected Date Statistics
+                        StatCard(
                     title: "統計情報",
-                    icon: "calendar.badge.clock",
-                    items: [
-                        StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedDate)回"),
-                        StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedDate * 25)分")
-                    ]
-                )
-                
-                // Monthly Statistics
-                StatCard(
-                    title: "月間統計",
-                    icon: "calendar.badge.plus",
-                    items: [
-                        StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedMonth)回"),
-                        StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedMonth * 25)分")
-                    ]
-                )
+                            icon: "calendar.badge.clock",
+                            items: [
+                                StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedDate)回"),
+                                StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedDate * 25)分")
+                            ]
+                        )
+                        
+                        // Monthly Statistics
+                        StatCard(
+                            title: "月間統計",
+                            icon: "calendar.badge.plus",
+                            items: [
+                                StatItem(label: "完了数", value: "\(viewModel.completedCountForSelectedMonth)回"),
+                                StatItem(label: "集中時間", value: "\(viewModel.completedCountForSelectedMonth * 25)分")
+                            ]
+                        )
                 
                 // Monthly Category Statistics
                 CategoryStatisticsCard(
@@ -68,42 +68,42 @@ struct StatisticsView: View {
                     statistics: viewModel.getOverallCategoryStatistics(),
                     totalCount: viewModel.getTotalCount(from: viewModel.getOverallCategoryStatistics())
                 )
-                
-                // Current Task
-                if !viewModel.currentTaskName.isEmpty {
-                    StatCard(
-                        title: "現在のタスク",
-                        icon: "checkmark.circle.fill",
-                        items: [
-                            StatItem(label: "タスク名", value: viewModel.currentTaskName),
-                            StatItem(label: "推定時間", value: "\(viewModel.currentTaskEstimatedMinutes)分")
-                        ]
-                    )
-                }
-                
-                // Reset Button
-                Button(action: {
-                    viewModel.resetCompletedCount()
-                }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.title3)
                         
-                        Text("完了数をリセット")
-                            .headlineStyle()
+                        // Current Task
+                        if !viewModel.currentTaskName.isEmpty {
+                            StatCard(
+                                title: "現在のタスク",
+                                icon: "checkmark.circle.fill",
+                                items: [
+                                    StatItem(label: "タスク名", value: viewModel.currentTaskName),
+                                    StatItem(label: "推定時間", value: "\(viewModel.currentTaskEstimatedMinutes)分")
+                                ]
+                            )
+                        }
+                        
+                        // Reset Button
+                        Button(action: {
+                            viewModel.resetCompletedCount()
+                        }) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.title3)
+                                
+                                Text("完了数をリセット")
+                                    .headlineStyle()
+                            }
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(DesignSystem.Colors.warning)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 16)
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(DesignSystem.Colors.warning)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 50)
                 }
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 50)
-        }
         .background(DesignSystem.Colors.background)
         .navigationTitle("統計")
         .navigationBarTitleDisplayMode(.large)
@@ -256,8 +256,8 @@ struct CalendarDayView: View {
             if completedCount > 0 {
                 HStack(spacing: 1) {
                     ForEach(0..<min(completedCount, 3), id: \.self) { _ in
-                        Circle()
-                            .fill(DesignSystem.Colors.neonBlue)
+                Circle()
+                    .fill(DesignSystem.Colors.neonBlue)
                             .frame(width: 4, height: 4)
                     }
                 }
@@ -311,13 +311,13 @@ struct HourlyPomodoroGraphView: View {
                                     Circle()
                                         .fill(hourlyColors[hour])
                                         .frame(width: 6, height: 6)
-                                        .shadow(
+                    .shadow(
                                             color: hourlyColors[hour].opacity(0.6),
                                             radius: 1,
-                                            x: 0,
-                                            y: 0
-                                        )
-                                }
+                        x: 0,
+                        y: 0
+                    )
+            }
                             }
                         }
                         .frame(width: 8) // 各時間の幅を統一
@@ -330,7 +330,7 @@ struct HourlyPomodoroGraphView: View {
             HStack {
                 ForEach(timeLabels, id: \.self) { label in
                     Text(label)
-                        .captionStyle()
+                    .captionStyle()
                         .foregroundColor(.white)
                     
                     if label != timeLabels.last {
