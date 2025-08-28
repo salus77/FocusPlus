@@ -1,9 +1,98 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="false" userDefinedModelVersionIdentifier="">
+<model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="1" systemVersion="11A491" minimumToolsVersion="Automatic" sourceLanguage="Swift" usedWithCloudKit="true" userDefinedModelVersionIdentifier="">
     <entity name="Item" representedClassName="Item" syncable="YES" codeGenerationType="class">
         <attribute name="timestamp" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
     </entity>
+    
+    <!-- TaskPlus同期用のエンティティ -->
+    <entity name="TaskPlusTask" representedClassName="TaskPlusTask" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString=""/>
+        <attribute name="title" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString=""/>
+        <attribute name="notes" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="due" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="status" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString="inbox"/>
+        <attribute name="priority" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString="normal"/>
+        <attribute name="context" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString="none"/>
+        <attribute name="categoryId" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="tags" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String]"/>
+        <attribute name="estimatedTime" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="actualTime" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="customFields" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String: Any]"/>
+        <relationship name="focusSessions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TaskPlusFocusSession" inverseName="task" inverseEntity="TaskPlusFocusSession"/>
+        <relationship name="category" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TaskPlusCategory" inverseName="tasks" inverseEntity="TaskPlusCategory"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    
+    <entity name="TaskPlusCategory" representedClassName="TaskPlusCategory" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString=""/>
+        <attribute name="name" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString=""/>
+        <attribute name="icon" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString="folder"/>
+        <attribute name="color" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString="blue"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="descriptionText" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="parentId" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="sortOrder" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="isActive" optional="NO" attributeType="Boolean" defaultValueString="YES" usesScalarValueType="YES"/>
+        <attribute name="customFields" optional="YES" attributeType="Transformable" valueTransformerName="NSSecureUnarchiveFromData" customClassName="[String: Any]"/>
+        <relationship name="tasks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="TaskPlusTask" inverseName="category" inverseEntity="TaskPlusTask"/>
+        <relationship name="parentCategory" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TaskPlusCategory" inverseName="subCategories" inverseEntity="TaskPlusCategory"/>
+        <relationship name="subCategories" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="TaskPlusCategory" inverseName="parentCategory" inverseEntity="TaskPlusCategory"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    
+    <entity name="TaskPlusFocusSession" representedClassName="TaskPlusFocusSession" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString=""/>
+        <attribute name="startTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="endTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="duration" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="focusMode" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString="pomodoro"/>
+        <attribute name="notes" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="interruptions" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="energyLevel" optional="YES" attributeType="Integer 32" defaultValueString="5" usesScalarValueType="YES"/>
+        <attribute name="productivity" optional="YES" attributeType="Integer 32" defaultValueString="5" usesScalarValueType="YES"/>
+        <relationship name="task" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="TaskPlusTask" inverseName="focusSessions" inverseEntity="TaskPlusTask"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    
+    <entity name="FocusPlusSession" representedClassName="FocusPlusSession" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString=""/>
+        <attribute name="startTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="endTime" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="duration" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="focusMode" optional="NO" attributeType="String" usesScalarValueType="NO" defaultValueString="pomodoro"/>
+        <attribute name="notes" optional="YES" attributeType="String" usesScalarValueType="NO"/>
+        <attribute name="interruptions" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="energyLevel" optional="YES" attributeType="Integer 32" defaultValueString="5" usesScalarValueType="YES"/>
+        <attribute name="productivity" optional="YES" attributeType="Integer 32" defaultValueString="5" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <uniquenessConstraints>
+            <uniquenessConstraint>
+                <constraint value="id"/>
+            </uniquenessConstraint>
+        </uniquenessConstraints>
+    </entity>
+    
     <elements>
         <element name="Item" positionX="-63" positionY="-18" width="128" height="44"/>
+        <element name="TaskPlusTask" positionX="-63" positionY="72" width="128" height="200"/>
+        <element name="TaskPlusCategory" positionX="72" positionY="72" width="128" height="200"/>
+        <element name="TaskPlusFocusSession" positionX="-63" positionY="288" width="128" height="200"/>
+        <element name="FocusPlusSession" positionX="72" positionY="288" width="128" height="200"/>
     </elements>
 </model>

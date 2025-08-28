@@ -216,6 +216,7 @@ let sampleCategories = [
 struct ContentView: View {
     @StateObject private var viewModel = TimerViewModel()
     @StateObject private var taskManager = TaskManager()
+    @EnvironmentObject var taskPlusSyncManager: TaskPlusSyncManager
     @State private var showingBreakSheet = false
     @State private var showingHelp = false
     @State private var showingTaskManager = false
@@ -231,6 +232,7 @@ struct ContentView: View {
         case settings
         case statistics
         case taskManagement
+        case taskPlusSync
     }
     
     // MARK: - Computed Properties for Navigation
@@ -251,6 +253,13 @@ struct ContentView: View {
     private var showingTaskManagement: Binding<Bool> {
         Binding(
             get: { navigationState == .taskManagement },
+            set: { if !$0 { navigationState = .none } }
+        )
+    }
+    
+    private var showingTaskPlusSync: Binding<Bool> {
+        Binding(
+            get: { navigationState == .taskPlusSync },
             set: { if !$0 { navigationState = .none } }
         )
     }
@@ -308,13 +317,19 @@ struct ContentView: View {
                     }
             }
             .navigationDestination(isPresented: showingSettings) {
-                SettingsView(viewModel: viewModel, isPresented: showingSettings)
+                SettingsView(viewModel: viewModel, isPresented: showingSettings, navigationState: $navigationState)
                     .onDisappear {
                         dismissNavigation()
                     }
             }
             .navigationDestination(isPresented: showingTaskManagement) {
                 TaskManagementView(taskManager: taskManager)
+                    .onDisappear {
+                        dismissNavigation()
+                    }
+            }
+            .navigationDestination(isPresented: showingTaskPlusSync) {
+                TaskPlusSyncView(syncManager: taskPlusSyncManager)
                     .onDisappear {
                         dismissNavigation()
                     }
@@ -1136,15 +1151,15 @@ struct RightMenuOverlay: View {
                 
                 // メニューアイテム
                 VStack(spacing: 0) {
-                    // 設定
+                    // タスク管理
                     MenuItem(
-                        icon: "gearshape.fill",
-                        title: "設定",
-                        color: .blue
+                        icon: "list.bullet",
+                        title: "タスク管理",
+                        color: .orange
                     ) {
-                        print("🔧 Settings MenuItem tapped!")
+                        print("📋 Task Management MenuItem tapped!")
                         HapticsManager.shared.lightImpact()
-                        onSettingsTapped()
+                        onTaskManagementTapped()
                     }
                     
                     Divider()
@@ -1164,15 +1179,15 @@ struct RightMenuOverlay: View {
                     Divider()
                         .background(Color.gray.opacity(0.3))
                     
-                    // タスク管理
+                    // 設定
                     MenuItem(
-                        icon: "list.bullet",
-                        title: "タスク管理",
-                        color: .orange
+                        icon: "gearshape.fill",
+                        title: "設定",
+                        color: .blue
                     ) {
-                        print("📋 Task Management MenuItem tapped!")
+                        print("🔧 Settings MenuItem tapped!")
                         HapticsManager.shared.lightImpact()
-                        onTaskManagementTapped()
+                        onSettingsTapped()
                     }
                 }
                 .padding(.horizontal, 24)

@@ -11,8 +11,12 @@ import UserNotifications
 @main
 struct FocusPlusApp: App {
     let persistenceController = PersistenceController.shared
+    let taskPlusSyncManager: TaskPlusSyncManager
     
     init() {
+        // TaskPlusSyncManagerの初期化
+        self.taskPlusSyncManager = TaskPlusSyncManager(persistenceController: persistenceController)
+        
         // 通知権限の要求
         requestNotificationPermissions()
         // 通知設定の初期化
@@ -25,6 +29,7 @@ struct FocusPlusApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(taskPlusSyncManager)
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
                     // アプリがアクティブになった時にバッジをクリア
                     clearBadge()

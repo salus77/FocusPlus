@@ -35,7 +35,7 @@ struct CircularDialView: View {
                             style: StrokeStyle(lineWidth: 4, lineCap: .round)
                         )
                         .frame(width: geometry.size.width * 0.75, height: geometry.size.width * 0.75)
-                        .rotationEffect(.degrees(-90))
+                    .rotationEffect(.degrees(-90))
                         .opacity(completionBlinkOpacity)
                 }
                 
@@ -46,18 +46,18 @@ struct CircularDialView: View {
                 
                 // 分刻みの目盛り（円の外側に配置、タイマー停止中のみ表示）
                 if viewModel.state != .running {
-                    ForEach(0..<60, id: \.self) { minute in
-                        let angle = Double(minute) * 6.0 - 90.0 // 6度刻み（360度÷60分）
-                        let isMajorTick = minute % 5 == 0 // 5分刻みで太い目盛り
-                        
-                        Rectangle()
+                ForEach(0..<60, id: \.self) { minute in
+                    let angle = Double(minute) * 6.0 - 90.0 // 6度刻み（360度÷60分）
+                    let isMajorTick = minute % 5 == 0 // 5分刻みで太い目盛り
+                    
+                    Rectangle()
                             .fill(Color.white.opacity(isMajorTick ? 0.8 : 0.4))
-                            .frame(
+                        .frame(
                                 width: isMajorTick ? 2 : 1,
                                 height: isMajorTick ? 10 : 6
-                            )
+                        )
                             .offset(y: -geometry.size.width * 0.425) // 円の外側に配置
-                            .rotationEffect(.degrees(angle))
+                        .rotationEffect(.degrees(angle))
                     }
                 }
                 
@@ -224,19 +224,19 @@ struct CircularDialView: View {
         } else {
             // 設定モード時は残り時間ベースで計算
             // 設定時間を角度に変換（0度=0分、6度=1分、360度=60分）
-            let currentAngle = timeToAngle(viewModel.timeRemaining)
-            
-            // SwiftUIのCircle().trim()は3時方向（右）から時計回りに描画され、
-            // .rotationEffect(.degrees(-90))で12時方向に回転させている
+        let currentAngle = timeToAngle(viewModel.timeRemaining)
+        
+        // SwiftUIのCircle().trim()は3時方向（右）から時計回りに描画され、
+        // .rotationEffect(.degrees(-90))で12時方向に回転させている
             // プログレスは0から1の範囲で、時計回りに増加する
-            let progress = currentAngle / 360.0
-            
+        let progress = currentAngle / 360.0
+        
             // デバッグログは無効化（必要に応じて有効化可能）
             #if DEBUG && false
             print("📊 設定モードプログレス計算: 時間=\(viewModel.timeRemaining/60)分, 角度=\(String(format: "%.1f", currentAngle))°, プログレス=\(String(format: "%.3f", progress))")
-            #endif
-            
-            return max(0, min(1, progress))
+        #endif
+        
+        return max(0, min(1, progress))
         }
     }
     

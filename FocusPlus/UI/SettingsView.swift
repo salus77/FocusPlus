@@ -4,6 +4,8 @@ struct SettingsView: View {
     @ObservedObject var viewModel: TimerViewModel
     @Binding var isPresented: Bool
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var taskPlusSyncManager: TaskPlusSyncManager
+    @Binding var navigationState: ContentView.NavigationState
     
     var body: some View {
         ScrollView {
@@ -48,6 +50,33 @@ struct SettingsView: View {
                             unit: "分"
                         )
                     }
+                }
+                
+                // TaskPlus Integration
+                SettingsSection(title: "TaskPlus連携") {
+                    Button(action: {
+                        navigationState = .taskPlusSync
+                    }) {
+                        HStack(spacing: 16) {
+                            Image(systemName: "icloud.fill")
+                                .font(.title3)
+                                .foregroundColor(DesignSystem.Colors.neonBlue)
+                                .frame(width: 24)
+                            
+                            Text("TaskPlus同期設定")
+                                .bodyStyle()
+                                .primaryText()
+                            
+                            Spacer()
+                            
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 
                 // App Info
@@ -198,5 +227,5 @@ struct SettingsInfoRow: View {
 }
 
 #Preview {
-    SettingsView(viewModel: TimerViewModel(), isPresented: .constant(true))
+    SettingsView(viewModel: TimerViewModel(), isPresented: .constant(true), navigationState: .constant(.none))
 }
