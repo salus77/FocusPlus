@@ -38,7 +38,7 @@ struct BottomControlsView: View {
                             .clipShape(Circle())
                             .overlay(
                                 Circle()
-                                    .stroke(viewModel.currentTaskCategoryColor.opacity(0.3), lineWidth: 2)
+                                    .stroke(viewModel.currentTag?.color.opacity(0.3) ?? DesignSystem.Colors.neonBlue.opacity(0.3), lineWidth: 2)
                             )
                     }
                     .disabled(viewModel.state == .finished) // Disabled when finished
@@ -89,7 +89,7 @@ struct BottomControlsView: View {
                             .clipShape(Circle())
                             .overlay(
                                 Circle()
-                                    .stroke(viewModel.currentTaskCategoryColor.opacity(0.3), lineWidth: 2)
+                                    .stroke(viewModel.currentTag?.color.opacity(0.3) ?? DesignSystem.Colors.neonBlue.opacity(0.3), lineWidth: 2)
                             )
                     }
                     .disabled(viewModel.state == .finished) // Disabled when finished
@@ -117,7 +117,7 @@ struct BottomControlsView: View {
         case .finished:
             return .gray // Gray color when finished
         default:
-            return viewModel.currentTaskCategoryColor
+            return viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue
         }
     }
     
@@ -126,9 +126,9 @@ struct BottomControlsView: View {
         case .finished:
             return Color.gray.opacity(0.3) // Gray background when finished
         case .running:
-            return viewModel.currentTaskCategoryColor.opacity(0.2) // カテゴリ色の薄い背景
+            return (viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue).opacity(0.2) // タグ色の薄い背景
         default:
-            return viewModel.currentTaskCategoryColor.opacity(0.3) // カテゴリ色の背景
+            return (viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue).opacity(0.3) // タグ色の背景
         }
     }
 }

@@ -22,9 +22,7 @@ class TimerViewModel: ObservableObject {
     @Published var completedCountToday: Int = 0
     @Published var selectedDate: Date = Date()
     @Published var selectedCalendarMonth: Date = Date()
-    @Published var currentTaskName: String = ""
-    @Published var currentTaskEstimatedMinutes: Int = 0
-    @Published var currentTaskCategoryColor: Color = DesignSystem.Colors.neonBlue
+    @Published var currentTag: Tag?
     
     // Completion animation callback
     var onCompletionAnimationFinished: (() -> Void) = {}
@@ -57,6 +55,28 @@ class TimerViewModel: ObservableObject {
             }
         }
     }
+    @Published var isScreenAlwaysOn: Bool = false {
+        didSet { 
+            saveSettings()
+            updateScreenState()
+        }
+    }
+    
+    @Published var isBackgroundRefreshEnabled: Bool = true {
+        didSet { 
+            saveSettings()
+            updateBackgroundRefreshState()
+        }
+    }
+    
+    @Published var isBackgroundAudioEnabled: Bool = true {
+        didSet { 
+            saveSettings()
+            updateBackgroundAudioState()
+        }
+    }
+    
+
 
     private var timer: Timer?
     private let userDefaults = UserDefaults.standard
@@ -65,13 +85,20 @@ class TimerViewModel: ObservableObject {
     init() {
         loadSettings()
         loadCompletedCount()
-        loadCurrentTask()
         updateWidgetData()
         // アプリ起動時にバッジをクリア
         clearBadge()
         
         // アプリのアクティブ状態を監視
         setupAppStateMonitoring()
+    }
+    
+    // MARK: - Initialization
+    /// 外部からの初期化完了通知（TagManagerの初期化完了後に呼び出される）
+    func onInitializationComplete() {
+        // 初期化完了後の処理
+        print("🎯 TimerViewModel初期化完了")
+        updateWidgetData()
     }
     
     // MARK: - App State Monitoring
@@ -143,6 +170,7 @@ class TimerViewModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         updateWidgetData()
+        updateScreenState() // スクリーン状態を更新
         if hapticsEnabled {
             HapticsManager.shared.lightImpact()
         }
@@ -155,6 +183,7 @@ class TimerViewModel: ObservableObject {
         timeRemaining = focusDuration * 60
         totalTime = timeRemaining
         updateWidgetData()
+        updateScreenState() // スクリーン状態を更新
         if hapticsEnabled {
             HapticsManager.shared.heavyImpact()
         }
@@ -200,6 +229,7 @@ class TimerViewModel: ObservableObject {
         }
         
         updateWidgetData()
+        updateScreenState() // スクリーン状態を更新
     }
 
     // MARK: - Break Management
@@ -211,38 +241,58 @@ class TimerViewModel: ObservableObject {
     }
 
     private func completeFocusSession() {
+        print("🎯 completeFocusSession() 呼び出され")
         completedCountToday += 1
         saveCompletedCount()
         saveHourlyCompletedCount() // 時間ごとのデータを保存
         
-        // 音の再生
+        // 音の再生（即座に実行）
+        print("🔊 音の再生を試行: soundEnabled=\(soundEnabled)")
         if soundEnabled {
+            print("🔊 SoundManager.shared.playChime() を呼び出し")
             SoundManager.shared.playChime()
+        } else {
+            print("🔇 音が無効化されているため再生しません")
+        }
+        
+        // 触覚フィードバック（振動）（即座に実行）
+        print("📳 触覚フィードバックを試行: hapticsEnabled=\(hapticsEnabled)")
+        if hapticsEnabled {
+            print("📳 HapticsManager.shared.successNotification() を呼び出し")
+            HapticsManager.shared.successNotification()
+        } else {
+            print("📳 触覚フィードバックが無効化されているため実行しません")
         }
         
         // 通知の送信
-        let taskName = currentTaskName.isEmpty ? "集中セッション" : currentTaskName
+        let taskName = currentTag?.name ?? "集中セッション"
         sendNotification(
             title: "集中セッション完了！",
             body: "\(taskName)が完了しました。お疲れ様でした！"
         )
         
-        // 点滅アニメーション完了後に状態をリセット
-        // この処理はCircularDialViewのアニメーション完了後に実行される
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self = self else { return }
-            self.phase = .break_
-            self.timeRemaining = self.breakDuration * 60
-            self.totalTime = self.timeRemaining
-            self.state = .idle
-            self.updateWidgetData()
-        }
+        // 点滅アニメーション完了後の処理は、CircularDialViewからコールバックされる
     }
 
     private func completeBreakSession() {
-        // 音の再生
+        print("🎯 completeBreakSession() 呼び出され")
+        
+        // 音の再生（即座に実行）
+        print("🔊 音の再生を試行: soundEnabled=\(soundEnabled)")
         if soundEnabled {
+            print("🔊 SoundManager.shared.playChime() を呼び出し")
             SoundManager.shared.playChime()
+        } else {
+            print("🔇 音が無効化されているため再生しません")
+        }
+        
+        // 触覚フィードバック（振動）（即座に実行）
+        print("📳 触覚フィードバックを試行: hapticsEnabled=\(hapticsEnabled)")
+        if hapticsEnabled {
+            print("📳 HapticsManager.shared.successNotification() を呼び出し")
+            HapticsManager.shared.successNotification()
+        } else {
+            print("📳 触覚フィードバックが無効化されているため実行しません")
         }
         
         // 通知の送信
@@ -251,24 +301,35 @@ class TimerViewModel: ObservableObject {
             body: "休憩が終わりました。次の集中セッションを始めましょう！"
         )
         
-        // 点滅アニメーション完了後に状態をリセット
-        // この処理はCircularDialViewのアニメーション完了後に実行される
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            guard let self = self else { return }
-            self.phase = .focus
-            self.timeRemaining = self.focusDuration * 60
-            self.totalTime = self.timeRemaining
-            self.state = .idle
-            self.updateWidgetData()
+        // 点滅アニメーション完了後の処理は、CircularDialViewからコールバックされる
+    }
+    
+    // MARK: - Animation Completion Callback
+    /// 点滅アニメーション完了後の処理
+    func handleCompletionAnimationFinished() {
+        print("🎬 点滅アニメーション完了: 状態をリセット")
+        
+        if phase == .focus {
+            // 集中セッション完了後の処理
+            phase = .break_
+            timeRemaining = breakDuration * 60
+            totalTime = timeRemaining
+            state = .idle
+            updateWidgetData()
+        } else {
+            // 休憩時間完了後の処理
+            phase = .focus
+            timeRemaining = focusDuration * 60
+            totalTime = timeRemaining
+            state = .idle
+            updateWidgetData()
         }
     }
 
-    // MARK: - Task Management
+    // MARK: - Tag Management
     func setCurrentTask(name: String, estimatedMinutes: Int, categoryColor: Color) {
-        currentTaskName = name
-        currentTaskEstimatedMinutes = estimatedMinutes
-        currentTaskCategoryColor = categoryColor
-        saveCurrentTask()
+        // このメソッドは後方互換性のために残していますが、実際には使用されません
+        // 新しいタグ管理システムでは currentTag を使用します
     }
 
     // MARK: - Statistics
@@ -501,9 +562,9 @@ class TimerViewModel: ObservableObject {
         saveHourlyCompletedColor(hour: hour)
         
         // カテゴリ統計も更新
-        if !currentTaskName.isEmpty {
-            // タスク名からカテゴリ名を抽出（例：タスク名が "Work: プロジェクトA" の場合、"Work" がカテゴリ）
-            let categoryName = extractCategoryFromTaskName(currentTaskName)
+        if let tag = currentTag {
+            // タグ名をカテゴリとして使用
+            let categoryName = tag.name
             updateCategoryStatistics(categoryName: categoryName)
         }
     }
@@ -514,7 +575,7 @@ class TimerViewModel: ObservableObject {
         var hourlyColors = userDefaults.array(forKey: key) as? [[CGFloat]] ?? Array(repeating: [], count: 24)
         
         // 現在のタスクのカテゴリ色をRGB値で保存
-        let colorComponents = UIColor(currentTaskCategoryColor).cgColor.components ?? [0, 0.7, 1, 1]
+        let colorComponents = UIColor(currentTag?.color ?? DesignSystem.Colors.neonBlue).cgColor.components ?? [0, 0.7, 1, 1]
         hourlyColors[hour] = Array(colorComponents)
         userDefaults.set(hourlyColors, forKey: key)
     }
@@ -543,30 +604,11 @@ class TimerViewModel: ObservableObject {
     }
 
     private func saveCurrentTask() {
-        userDefaults.set(currentTaskName, forKey: "currentTaskName")
-        userDefaults.set(currentTaskEstimatedMinutes, forKey: "currentTaskEstimatedMinutes")
-        
-        // カテゴリの色をRGB値で保存
-        let colorComponents = UIColor(currentTaskCategoryColor).cgColor.components ?? [0, 0.7, 1, 1] // デフォルトはneonBlue
-        userDefaults.set(Array(colorComponents), forKey: "currentTaskCategoryColor")
+        // 新しいタグ管理システムでは使用されません
     }
 
     private func loadCurrentTask() {
-        currentTaskName = userDefaults.string(forKey: "currentTaskName") ?? ""
-        currentTaskEstimatedMinutes = userDefaults.integer(forKey: "currentTaskEstimatedMinutes")
-        
-        // カテゴリの色を復元
-        if let colorComponents = userDefaults.array(forKey: "currentTaskCategoryColor") as? [CGFloat],
-           colorComponents.count >= 3 {
-            currentTaskCategoryColor = Color(.sRGB, 
-                                           red: colorComponents[0], 
-                                           green: colorComponents[1], 
-                                           blue: colorComponents[2], 
-                                           opacity: colorComponents.count > 3 ? colorComponents[3] : 1.0)
-        } else {
-            currentTaskCategoryColor = DesignSystem.Colors.neonBlue
-        }
-        
+        // 新しいタグ管理システムでは使用されません
         // カテゴリ別統計データを読み込み
         loadCategoryStatistics()
     }
@@ -577,6 +619,9 @@ class TimerViewModel: ObservableObject {
         userDefaults.set(hapticsEnabled, forKey: "hapticsEnabled")
         userDefaults.set(focusDuration, forKey: "focusDuration")
         userDefaults.set(breakDuration, forKey: "breakDuration")
+        userDefaults.set(isScreenAlwaysOn, forKey: "isScreenAlwaysOn")
+        userDefaults.set(isBackgroundRefreshEnabled, forKey: "isBackgroundRefreshEnabled")
+        userDefaults.set(isBackgroundAudioEnabled, forKey: "isBackgroundAudioEnabled")
     }
     
     private func loadSettings() {
@@ -584,6 +629,9 @@ class TimerViewModel: ObservableObject {
         hapticsEnabled = userDefaults.object(forKey: "hapticsEnabled") as? Bool ?? true
         focusDuration = userDefaults.object(forKey: "focusDuration") as? Double ?? 25
         breakDuration = userDefaults.object(forKey: "breakDuration") as? Double ?? 5
+        isScreenAlwaysOn = userDefaults.object(forKey: "isScreenAlwaysOn") as? Bool ?? false
+        isBackgroundRefreshEnabled = userDefaults.object(forKey: "isBackgroundRefreshEnabled") as? Bool ?? true
+        isBackgroundAudioEnabled = userDefaults.object(forKey: "isBackgroundAudioEnabled") as? Bool ?? true
         
         // 初期時間の設定
         if state == .idle {
@@ -626,9 +674,9 @@ class TimerViewModel: ObservableObject {
         saveCategoryStatistics()
     }
     
-    // MARK: - Category Color Management
+    // MARK: - Tag Color Management
     func updateCurrentTaskCategoryColor(_ color: Color) {
-        currentTaskCategoryColor = color
+        // 新しいタグ管理システムでは使用されません
     }
     
     func getCategoryColor(for categoryName: String) -> Color {
@@ -665,15 +713,7 @@ class TimerViewModel: ObservableObject {
         return [:]
     }
     
-    private func extractCategoryFromTaskName(_ taskName: String) -> String {
-        // タスク名からカテゴリ名を抽出
-        // 例: "Work: プロジェクトA" -> "Work"
-        if let colonIndex = taskName.firstIndex(of: ":") {
-            return String(taskName[..<colonIndex]).trimmingCharacters(in: .whitespaces)
-        }
-        // コロンがない場合は、タスク名をそのままカテゴリとして使用
-        return taskName
-    }
+
     
     // MARK: - Notification Management
     private func sendNotification(title: String, body: String, categoryIdentifier: String = "FOCUSPLUS_TIMER") {
@@ -708,6 +748,30 @@ class TimerViewModel: ObservableObject {
     func clearBadge() {
         UIApplication.shared.applicationIconBadgeNumber = 0
         UNUserNotificationCenter.current().setBadgeCount(0)
+    }
+    
+    // MARK: - Screen State Management
+    private func updateScreenState() {
+        // タイマー実行中かつスクリーン常時オンが有効な場合のみ、画面を常時オンにする
+        if isScreenAlwaysOn && (state == .running) {
+            UIApplication.shared.isIdleTimerDisabled = true
+        } else {
+            UIApplication.shared.isIdleTimerDisabled = false
+        }
+    }
+    
+    // MARK: - Background Refresh Management
+    private func updateBackgroundRefreshState() {
+        // バックグラウンド更新の設定をシステムに反映
+        // 実際の実装では、システムのバックグラウンド更新設定と連携
+        print("バックグラウンド更新設定が変更されました: \(isBackgroundRefreshEnabled)")
+    }
+    
+    // MARK: - Background Audio Management
+    private func updateBackgroundAudioState() {
+        // バックグラウンド音声再生の設定をシステムに反映
+        // 実際の実装では、AVAudioSessionの設定と連携
+        print("バックグラウンド音声再生設定が変更されました: \(isBackgroundAudioEnabled)")
     }
     
     // MARK: - Cleanup

@@ -60,6 +60,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		CB8D3CEF2E6128B200FC1D03 /* Exceptions for "FocusPlus" folder in "FocusPlus" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = CB32C5DF2E57E1F2006FFB48 /* FocusPlus */;
+		};
 		CBAC72D42E5B576B00234EA8 /* Exceptions for "FocusPlusWidget" folder in "FocusPlusWidgetExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -72,6 +79,9 @@
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		CB32C5E22E57E1F2006FFB48 /* FocusPlus */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				CB8D3CEF2E6128B200FC1D03 /* Exceptions for "FocusPlus" folder in "FocusPlus" target */,
+			);
 			path = FocusPlus;
 			sourceTree = "<group>";
 		};
@@ -516,6 +526,7 @@
 				DEVELOPMENT_TEAM = Z2MGX9K6L6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusPlus/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -546,6 +557,7 @@
 				DEVELOPMENT_TEAM = Z2MGX9K6L6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FocusPlus/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

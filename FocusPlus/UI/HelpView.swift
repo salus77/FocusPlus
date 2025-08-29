@@ -10,7 +10,7 @@ struct HelpView: View {
                 // Header
                 HStack {
                     Text("ヘルプ")
-                        .largeTitleStyle()
+                        .title2Style()
                         .primaryText()
                     
                     Spacer()
@@ -42,13 +42,13 @@ struct HelpView: View {
                             ]
                         )
                         
-                        // Swipe Gestures
+                        // Menu Access
                         HelpSection(
-                            title: "スワイプジェスチャー",
+                            title: "メニューアクセス",
                             icon: "hand.draw",
                             content: [
-                                "左から右へスワイプ: タスク管理を表示",
-                                "右から左へスワイプ: メニューを表示（タスク管理・統計・設定）",
+                                "左上のオレンジボタン: タスク管理を表示",
+                                "右上の青ボタン: メニューを表示（タスク管理・統計・設定）",
                                 "上から下へスワイプ: 統計画面を表示"
                             ]
                         )

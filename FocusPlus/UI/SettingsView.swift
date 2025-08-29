@@ -4,30 +4,11 @@ struct SettingsView: View {
     @ObservedObject var viewModel: TimerViewModel
     @Binding var isPresented: Bool
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var taskPlusSyncManager: TaskPlusSyncManager
     @Binding var navigationState: ContentView.NavigationState
     
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                // Sound Settings
-                SettingsSection(title: "サウンド") {
-                    SettingsRow(
-                        icon: "speaker.wave.2.fill",
-                        title: "サウンドを有効にする",
-                        isOn: $viewModel.soundEnabled
-                    )
-                }
-                
-                // Haptics Settings
-                SettingsSection(title: "触覚フィードバック") {
-                    SettingsRow(
-                        icon: "iphone.radiowaves.left.and.right",
-                        title: "触覚フィードバックを有効にする",
-                        isOn: $viewModel.hapticsEnabled
-                    )
-                }
-                
                 // Timer Settings
                 SettingsSection(title: "タイマー設定") {
                     VStack(spacing: 0) {
@@ -52,54 +33,65 @@ struct SettingsView: View {
                     }
                 }
                 
-                // TaskPlus Integration
-                SettingsSection(title: "TaskPlus連携") {
-                    Button(action: {
-                        navigationState = .taskPlusSync
-                    }) {
-                        HStack(spacing: 16) {
-                            Image(systemName: "icloud.fill")
-                                .font(.title3)
-                                .foregroundColor(DesignSystem.Colors.neonBlue)
-                                .frame(width: 24)
-                            
-                            Text("TaskPlus同期設定")
-                                .bodyStyle()
-                                .primaryText()
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                // Screen Settings
+                SettingsSection(title: "画面設定") {
+                    SettingsToggleRow(
+                        icon: "display",
+                        title: "スクリーン常時オン",
+                        description: "タイマー実行中は画面を消灯させない",
+                        isOn: $viewModel.isScreenAlwaysOn
+                    )
+                }
+                
+                // Sound Settings
+                SettingsSection(title: "サウンド設定") {
+                    SettingsRow(
+                        icon: "speaker.wave.2.fill",
+                        title: "サウンドを有効にする",
+                        isOn: $viewModel.soundEnabled
+                    )
+                }
+                
+                // Haptics Settings
+                SettingsSection(title: "振動フィードバック") {
+                    SettingsRow(
+                        icon: "iphone.radiowaves.left.and.right",
+                        title: "触覚フィードバックを有効にする",
+                        isOn: $viewModel.hapticsEnabled
+                    )
+                }
+                
+                // Background Settings
+                SettingsSection(title: "バックグラウンド設定") {
+                    SettingsToggleRow(
+                        icon: "arrow.clockwise",
+                        title: "バックグラウンド更新",
+                        description: "アプリがバックグラウンドで動作することを許可",
+                        isOn: $viewModel.isBackgroundRefreshEnabled
+                    )
+                    
+                    Divider()
+                        .background(Color.white.opacity(0.1))
+                    
+                    SettingsToggleRow(
+                        icon: "speaker.wave.2.fill",
+                        title: "バックグラウンド音声再生",
+                        description: "タイマー実行中の環境音をバックグラウンドで継続再生",
+                        isOn: $viewModel.isBackgroundAudioEnabled
+                    )
                 }
                 
                 // App Info
                 SettingsSection(title: "アプリ情報") {
-                    VStack(spacing: 0) {
-                        SettingsInfoRow(
-                            icon: "info.circle.fill",
-                            title: "バージョン",
-                            value: "1.0.0"
-                        )
-                        
-                        Divider()
-                            .background(Color.white.opacity(0.1))
-                        
-                        SettingsInfoRow(
-                            icon: "person.fill",
-                            title: "開発者",
-                            value: "Yasutaka Otsubo"
-                        )
-                    }
+                    SettingsInfoRow(
+                        icon: "info.circle.fill",
+                        title: "バージョン",
+                        value: "1.0.0"
+                    )
                 }
             }
             .padding(.horizontal, 24)
+            .padding(.top, 20)
             .padding(.bottom, 50)
         }
         .background(DesignSystem.Colors.background)
@@ -220,6 +212,42 @@ struct SettingsInfoRow: View {
             Text(value)
                 .subheadlineStyle()
                 .secondaryText()
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+    }
+}
+
+
+struct SettingsToggleRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    @Binding var isOn: Bool
+    
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(DesignSystem.Colors.neonBlue)
+                    .frame(width: 24)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .bodyStyle()
+                        .primaryText()
+                    
+                    Text(description)
+                        .captionStyle()
+                        .secondaryText()
+                }
+                
+                Spacer()
+                
+                Toggle("", isOn: $isOn)
+                    .toggleStyle(SwitchToggleStyle(tint: DesignSystem.Colors.accent))
+            }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)

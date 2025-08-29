@@ -69,14 +69,14 @@ struct StatisticsView: View {
                     totalCount: viewModel.getTotalCount(from: viewModel.getOverallCategoryStatistics())
                 )
                         
-                        // Current Task
-                        if !viewModel.currentTaskName.isEmpty {
+                        // Current Tag
+                        if let currentTag = viewModel.currentTag {
                             StatCard(
-                                title: "現在のタスク",
-                                icon: "checkmark.circle.fill",
+                                title: "現在のタグ",
+                                icon: "tag.fill",
                                 items: [
-                                    StatItem(label: "タスク名", value: viewModel.currentTaskName),
-                                    StatItem(label: "推定時間", value: "\(viewModel.currentTaskEstimatedMinutes)分")
+                                    StatItem(label: "タグ名", value: currentTag.name),
+                                    StatItem(label: "推定時間", value: "25分")
                                 ]
                             )
                         }

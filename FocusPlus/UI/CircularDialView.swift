@@ -31,7 +31,7 @@ struct CircularDialView: View {
                     Circle()
                         .trim(from: 0, to: 1)
                         .stroke(
-                            viewModel.currentTaskCategoryColor.opacity(0.15),
+                            (viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue).opacity(0.15),
                             style: StrokeStyle(lineWidth: 4, lineCap: .round)
                         )
                         .frame(width: geometry.size.width * 0.75, height: geometry.size.width * 0.75)
@@ -68,7 +68,7 @@ struct CircularDialView: View {
                         to: viewModel.state == .running ? (1 - progress) : progress
                     )
                     .stroke(
-                        viewModel.state == .finished ? Color.white : viewModel.currentTaskCategoryColor,
+                        viewModel.state == .finished ? Color.white : (viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue),
                         style: StrokeStyle(lineWidth: 4, lineCap: .round)
                     )
                     .frame(width: geometry.size.width * 0.75, height: geometry.size.width * 0.75)
@@ -82,18 +82,18 @@ struct CircularDialView: View {
                                // ドラッグ中の時間表示（少し大きく）
                                Text(timeString(from: timeFromDrag()))
                                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                                   .foregroundColor(viewModel.currentTaskCategoryColor)
+                                   .foregroundColor(viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue)
                                    .animation(.easeInOut(duration: 0.2), value: isDragging)
                            } else if viewModel.state == .running {
                                // タイマー実行中の時間表示（大きく）
                                Text(timeString(from: viewModel.timeRemaining))
                                    .font(.system(size: 52, weight: .bold, design: .rounded))
-                                   .foregroundColor(viewModel.currentTaskCategoryColor)
+                                   .foregroundColor(viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue)
                            } else {
                                // 通常の時間表示（停止中）
                                Text(timeString(from: viewModel.timeRemaining))
                                    .font(.system(size: 42, weight: .bold, design: .rounded))
-                                   .foregroundColor(viewModel.currentTaskCategoryColor)
+                                   .foregroundColor(viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue)
                            }
                     
                                                // フェーズ表示（文言を削除してよりミニマルに）
@@ -105,7 +105,7 @@ struct CircularDialView: View {
                     if showHint && !isDragging && viewModel.state != .running {
                         Text("ドラッグで時間設定")
                             .font(.caption)
-                            .foregroundColor(viewModel.currentTaskCategoryColor.opacity(0.7))
+                            .foregroundColor((viewModel.currentTag?.color ?? DesignSystem.Colors.neonBlue).opacity(0.7))
                             .opacity(showHint ? 1 : 0)
                             .animation(.easeInOut(duration: 0.3), value: showHint)
                     }
@@ -195,6 +195,13 @@ struct CircularDialView: View {
             if viewModel.totalTime == 0 {
                 viewModel.totalTime = viewModel.timeRemaining
             }
+            
+            // 色の同期を確認
+            print("🎨 CircularDialView onAppear - currentTag: \(viewModel.currentTag?.name ?? "nil"), color: \(viewModel.currentTag?.color.description ?? "nil")")
+        }
+        .onChange(of: viewModel.currentTag) { _, newTag in
+            // currentTagが変更された時の処理
+            print("🎨 currentTag変更: \(newTag?.name ?? "nil"), color: \(newTag?.color.description ?? "nil")")
         }
         .onChange(of: viewModel.state) { _, newState in
             print("🔄 状態変更: \(newState)")
@@ -405,7 +412,7 @@ struct CircularDialView: View {
                     
                     // 点滅完了後、BreakSheetView表示のためのコールバック
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                        self.viewModel.onCompletionAnimationFinished()
+                        self.viewModel.handleCompletionAnimationFinished()
                     }
                 }
             }

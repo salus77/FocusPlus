@@ -1,38 +1,30 @@
 import Foundation
 import AVFoundation
+import AudioToolbox
 
 class SoundManager {
     static let shared = SoundManager()
     
     private var audioPlayer: AVAudioPlayer?
     
-    private init() {
-        setupAudioSession()
-    }
-    
-    // MARK: - Audio Session Setup
-    private func setupAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("Failed to setup audio session: \(error)")
-        }
-    }
+    private init() {}
     
     // MARK: - Sound Playback
     func playChime() {
-        guard let url = Bundle.main.url(forResource: "chime", withExtension: "wav") else {
-            print("Chime sound file not found")
-            return
-        }
+        print("🔊 SoundManager: playChime() 呼び出され")
         
+        // システムサウンド（SMSメッセージ受信音）を使用
+        print("🔊 SMSメッセージ受信音を再生")
+        AudioServicesPlaySystemSound(1007) // SMSメッセージ受信音
+        
+        // 音声セッションの設定（オプション）
         do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer?.prepareToPlay()
-            audioPlayer?.play()
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+            try audioSession.setActive(true)
+            print("✅ 音声セッションの設定が完了しました")
         } catch {
-            print("Failed to play chime sound: \(error)")
+            print("⚠️ 音声セッションの設定に失敗しましたが、システムサウンドは再生されます: \(error)")
         }
     }
     

@@ -1,227 +1,25 @@
 import SwiftUI
 
 // MARK: - Data Models
-struct TaskCategory: Identifiable, Codable {
-    var id = UUID()
-    var name: String
-    var icon: String
-    var color: Color
-    var tasks: [TaskItem]
-    
-    init(name: String, icon: String, color: Color, tasks: [TaskItem] = []) {
-        self.id = UUID()
-        self.name = name
-        self.icon = icon
-        self.color = color
-        self.tasks = tasks
-    }
-    
-    // ColorのCodable対応
-    enum CodingKeys: String, CodingKey {
-        case id, name, icon, tasks, colorRed, colorGreen, colorBlue, colorOpacity
-    }
-    
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        id = try container.decode(UUID.self, forKey: .id)
-        name = try container.decode(String.self, forKey: .name)
-        icon = try container.decode(String.self, forKey: .icon)
-        tasks = try container.decode([TaskItem].self, forKey: .tasks)
-        
-        let red = try container.decode(Double.self, forKey: .colorRed)
-        let green = try container.decode(Double.self, forKey: .colorGreen)
-        let blue = try container.decode(Double.self, forKey: .colorBlue)
-        let opacity = try container.decode(Double.self, forKey: .colorOpacity)
-        color = Color(.sRGB, red: red, green: green, blue: blue, opacity: opacity)
-    }
-    
-    func encode(to encoder: Encoder) throws {
-        var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
-        try container.encode(name, forKey: .name)
-        try container.encode(icon, forKey: .icon)
-        try container.encode(tasks, forKey: .tasks)
-        
-        let uiColor = UIColor(color)
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        
-        try container.encode(Double(red), forKey: .colorRed)
-        try container.encode(Double(green), forKey: .colorGreen)
-        try container.encode(Double(blue), forKey: .colorBlue)
-        try container.encode(Double(alpha), forKey: .colorOpacity)
-    }
-}
 
-struct TaskItem: Identifiable, Codable {
-    var id = UUID()
-    var name: String
-    var description: String
-    var estimatedMinutes: Int
-    var priority: TaskPriority
-    var isCompleted: Bool
-    
-    init(name: String, description: String, estimatedMinutes: Int, priority: TaskPriority, isCompleted: Bool = false) {
-        self.id = UUID()
-        self.name = name
-        self.description = description
-        self.estimatedMinutes = estimatedMinutes
-        self.priority = priority
-        self.isCompleted = isCompleted
-    }
-}
 
-enum TaskPriority: String, CaseIterable, Codable {
-    case low = "低"
-    case medium = "中"
-    case high = "高"
-    
-    var color: Color {
-        switch self {
-        case .low: return .green
-        case .medium: return .orange
-        case .high: return .red
-        }
-    }
-}
 
-// MARK: - Task Manager
-class TaskManager: ObservableObject {
-    @Published var categories: [TaskCategory] = []
-    private let userDefaults = UserDefaults.standard
-    
-    init() {
-        loadCategories()
-    }
-    
-    // MARK: - Data Persistence
-    private func saveCategories() {
-        if let encoded = try? JSONEncoder().encode(categories) {
-            userDefaults.set(encoded, forKey: "taskCategories")
-        }
-    }
-    
-    private func loadCategories() {
-        if let data = userDefaults.data(forKey: "taskCategories"),
-           let decoded = try? JSONDecoder().decode([TaskCategory].self, from: data) {
-            categories = decoded
-        } else {
-            categories = sampleCategories
-            saveCategories()
-        }
-    }
-    
-    // MARK: - Category Operations
-    func addCategory(_ category: TaskCategory) {
-        categories.append(category)
-        saveCategories()
-    }
-    
-    func updateCategory(_ category: TaskCategory) {
-        if let index = categories.firstIndex(where: { $0.id == category.id }) {
-            categories[index] = category
-            saveCategories()
-        }
-    }
-    
-    func deleteCategory(_ category: TaskCategory) {
-        categories.removeAll { $0.id == category.id }
-        saveCategories()
-    }
-    
-    // MARK: - Task Operations
-    func addTask(_ task: TaskItem, to categoryId: UUID) {
-        if let categoryIndex = categories.firstIndex(where: { $0.id == categoryId }) {
-            categories[categoryIndex].tasks.append(task)
-            saveCategories()
-        }
-    }
-    
-    func updateTask(_ task: TaskItem, in categoryId: UUID) {
-        if let categoryIndex = categories.firstIndex(where: { $0.id == categoryId }),
-           let taskIndex = categories[categoryIndex].tasks.firstIndex(where: { $0.id == task.id }) {
-            categories[categoryIndex].tasks[taskIndex] = task
-            saveCategories()
-        }
-    }
-    
-    func deleteTask(_ taskId: UUID, from categoryId: UUID) {
-        if let categoryIndex = categories.firstIndex(where: { $0.id == categoryId }) {
-            categories[categoryIndex].tasks.removeAll { $0.id == taskId }
-            saveCategories()
-        }
-    }
-    
-    func deleteTask(_ task: TaskItem, from category: TaskCategory) {
-        if let categoryIndex = categories.firstIndex(where: { $0.id == category.id }) {
-            categories[categoryIndex].tasks.removeAll { $0.id == task.id }
-            saveCategories()
-        }
-    }
-    
-    func toggleTaskCompletion(_ taskId: UUID, in categoryId: UUID) {
-        if let categoryIndex = categories.firstIndex(where: { $0.id == categoryId }),
-           let taskIndex = categories[categoryIndex].tasks.firstIndex(where: { $0.id == taskId }) {
-            categories[categoryIndex].tasks[taskIndex].isCompleted.toggle()
-            saveCategories()
-        }
-    }
-}
 
-// MARK: - Sample Data
-let sampleCategories = [
-    TaskCategory(
-        name: "仕事",
-        icon: "briefcase.fill",
-        color: .blue,
-        tasks: [
-            TaskItem(name: "メール処理", description: "未読メールの確認と返信", estimatedMinutes: 30, priority: .medium, isCompleted: false),
-            TaskItem(name: "会議準備", description: "明日の会議資料の準備", estimatedMinutes: 60, priority: .high, isCompleted: false),
-            TaskItem(name: "レポート作成", description: "月次レポートの作成", estimatedMinutes: 90, priority: .medium, isCompleted: false)
-        ]
-    ),
-    TaskCategory(
-        name: "プロジェクト",
-        icon: "folder.fill",
-        color: .purple,
-        tasks: [
-            TaskItem(name: "アプリ開発", description: "新機能の実装", estimatedMinutes: 120, priority: .high, isCompleted: false),
-            TaskItem(name: "デザイン確認", description: "UIデザインのレビュー", estimatedMinutes: 45, priority: .medium, isCompleted: false)
-        ]
-    ),
-    TaskCategory(
-        name: "学習",
-        icon: "book.fill",
-        color: .green,
-        tasks: [
-            TaskItem(name: "SwiftUI学習", description: "新しいコンポーネントの学習", estimatedMinutes: 60, priority: .medium, isCompleted: false),
-            TaskItem(name: "英語学習", description: "オンライン英会話", estimatedMinutes: 30, priority: .low, isCompleted: false)
-        ]
-    ),
-    TaskCategory(
-        name: "個人",
-        icon: "person.fill",
-        color: .orange,
-        tasks: [
-            TaskItem(name: "運動", description: "ジムでのトレーニング", estimatedMinutes: 60, priority: .medium, isCompleted: false),
-            TaskItem(name: "読書", description: "技術書の読書", estimatedMinutes: 45, priority: .low, isCompleted: false)
-        ]
-    )
-]
+
 
 // MARK: - Main Content View
 struct ContentView: View {
     @StateObject private var viewModel = TimerViewModel()
-    @StateObject private var taskManager = TaskManager()
+    @StateObject private var tagManager = TagManager()
+    @StateObject private var ambientSoundManager = AmbientSoundManager()
     @EnvironmentObject var taskPlusSyncManager: TaskPlusSyncManager
     @State private var showingBreakSheet = false
     @State private var showingHelp = false
-    @State private var showingTaskManager = false
+    @State private var showingTagSelection = false
     @State private var showingRightMenu = false
-    @State private var taskManagerOffset: CGFloat = 0
+    @State private var showingAmbientSoundMenu = false
+    @State private var showingStatisticsSheet = false
+    @State private var tagSelectionOffset: CGFloat = 0
     @State private var rightMenuOffset: CGFloat = 0
     
     // MARK: - Navigation State
@@ -231,7 +29,7 @@ struct ContentView: View {
         case none
         case settings
         case statistics
-        case taskManagement
+        case tagManagement
         case taskPlusSync
     }
     
@@ -250,9 +48,9 @@ struct ContentView: View {
         )
     }
     
-    private var showingTaskManagement: Binding<Bool> {
+    private var showingTagManagement: Binding<Bool> {
         Binding(
-            get: { navigationState == .taskManagement },
+            get: { navigationState == .tagManagement },
             set: { if !$0 { navigationState = .none } }
         )
     }
@@ -281,9 +79,9 @@ struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     
-    var body: some View {
-        NavigationStack {
-            GeometryReader { geometry in
+    // MARK: - Main Content View
+    @ViewBuilder
+    private func mainContentView(geometry: GeometryProxy) -> some View {
                 ZStack {
                     // 背景色を全体に適用
                     DesignSystem.Colors.background
@@ -299,16 +97,77 @@ struct ContentView: View {
                             portraitLayout(geometry: geometry)
                         }
                     }
+            
+            // メニューボタンのオーバーレイ（タイマー画面のみ表示）
+            if navigationState == .none {
+                leftMenuButton
+                rightMenuButton
+                musicButton
+                statisticsButton
+                    }
                 }
                 .navigationBarHidden(true)
                 .onChange(of: viewModel.state) { _, newState in
+            handleTimerStateChange(newState)
+        }
+        .onChange(of: ambientSoundManager.selectedSound) { _, newSound in
+            handleSoundSelectionChange(newSound)
+        }
+    }
+    
+    // MARK: - Timer State Change Handler
+    private func handleTimerStateChange(_ newState: TimerState) {
                     if newState == .finished && viewModel.phase == .focus {
                         // 点滅アニメーション完了後にBreakSheetViewを表示
                         viewModel.onCompletionAnimationFinished = {
                             showingBreakSheet = true
                         }
                     }
-                }
+        
+        // 環境音の再生制御（デバッグ表示付き）
+        print("🔊 Ambient Sound Debug:")
+        print("  - Timer State: \(newState)")
+        print("  - Selected Sound: \(ambientSoundManager.selectedSound.displayName)")
+        print("  - Is Playing: \(ambientSoundManager.isPlaying)")
+        
+        // 選択されたサウンドがサイレントでない場合のみ再生
+        if ambientSoundManager.selectedSound != .silent {
+            switch newState {
+            case .running:
+                print("  - 🎵 Starting ambient sound...")
+                ambientSoundManager.playSound()
+            case .paused, .idle, .finished:
+                print("  - 🔇 Stopping ambient sound...")
+                ambientSoundManager.stopSound()
+            }
+        } else {
+            print("  - 🔇 Silent mode - no sound")
+            ambientSoundManager.stopSound()
+        }
+    }
+    
+    // MARK: - Sound Selection Change Handler
+    private func handleSoundSelectionChange(_ newSound: AmbientSound) {
+        print("🎵 Sound Selection Changed:")
+        print("  - New Sound: \(newSound.displayName)")
+        print("  - Current Timer State: \(viewModel.state)")
+        
+        // サウンド選択時の環境音制御
+        if newSound == .silent {
+            print("  - 🔇 Silent selected - stopping sound")
+            ambientSoundManager.stopSound()
+        } else if viewModel.state == .running {
+            print("  - 🎵 Non-silent sound selected and timer is running - starting sound")
+            ambientSoundManager.playSound()
+        } else {
+            print("  - ⏸️ Non-silent sound selected but timer is not running - sound will start when timer starts")
+        }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            GeometryReader { geometry in
+                mainContentView(geometry: geometry)
             }
             .navigationDestination(isPresented: showingStatistics) {
                 StatisticsView(viewModel: viewModel, isPresented: showingStatistics)
@@ -316,23 +175,32 @@ struct ContentView: View {
                         dismissNavigation()
                     }
             }
-            .navigationDestination(isPresented: showingSettings) {
-                SettingsView(viewModel: viewModel, isPresented: showingSettings, navigationState: $navigationState)
-                    .onDisappear {
-                        dismissNavigation()
-                    }
-            }
-            .navigationDestination(isPresented: showingTaskManagement) {
-                TaskManagementView(taskManager: taskManager)
-                    .onDisappear {
-                        dismissNavigation()
-                    }
-            }
+
+
             .navigationDestination(isPresented: showingTaskPlusSync) {
                 TaskPlusSyncView(syncManager: taskPlusSyncManager)
                     .onDisappear {
                         dismissNavigation()
                     }
+            }
+                    }
+        .onChange(of: tagManager.selectedTag) { _, newTag in
+            viewModel.currentTag = newTag
+            if let tag = newTag {
+                viewModel.setCurrentTask(name: tag.name, estimatedMinutes: 25, categoryColor: tag.color)
+            }
+        }
+        .onAppear {
+            // 起動直後の初期化処理
+            // TagManagerのselectedTagが設定されている場合は、TimerViewModelのcurrentTagと同期
+            if let selectedTag = tagManager.selectedTag {
+                viewModel.currentTag = selectedTag
+                viewModel.setCurrentTask(name: selectedTag.name, estimatedMinutes: 25, categoryColor: selectedTag.color)
+            }
+            
+            // TimerViewModelの初期化完了を通知
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                viewModel.onInitializationComplete()
             }
         }
         .sheet(isPresented: $showingBreakSheet) {
@@ -341,41 +209,130 @@ struct ContentView: View {
         .sheet(isPresented: $showingHelp) {
             HelpView(isPresented: $showingHelp)
         }
-        .gesture(swipeGesture)
-        .overlay(landscapeOverlay)
+        .sheet(isPresented: $showingAmbientSoundMenu) {
+            AmbientSoundMenuView(
+                soundManager: ambientSoundManager,
+                isPresented: $showingAmbientSoundMenu
+            )
+        }
+                    .sheet(isPresented: $showingStatisticsSheet) {
+                StatisticsView(viewModel: viewModel, isPresented: $showingStatisticsSheet)
+            }
+            .sheet(isPresented: $showingTagSelection) {
+                TagSelectionView(tagManager: tagManager, isPresented: $showingTagSelection)
+            }
+            .sheet(isPresented: showingSettings) {
+                SettingsView(viewModel: viewModel, isPresented: showingSettings, navigationState: $navigationState)
+            }
+        // .gesture(swipeGesture) // スワイプジェスチャーを無効化
+        .overlay(
+            // タイマー画面のみオーバーレイを表示
+            Group {
+                if navigationState == .none {
+                    landscapeOverlay
+                }
+            }
+        )
+    }
+    
+    // MARK: - Menu Button Overlays
+    private var leftMenuButton: some View {
+        Button(action: {
+            print("🏷️ Tag Button tapped!")
+            HapticsManager.shared.lightImpact()
+            showingTagSelection = true
+        }) {
+            Image(systemName: "tag.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.gray)
+                .frame(width: 24, height: 24)
+                .background(Color.black.opacity(0.8))
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .position(x: 30, y: 60)
+    }
+    
+    private var rightMenuButton: some View {
+        Button(action: {
+            print("⚙️ Right Menu Button tapped!")
+            HapticsManager.shared.lightImpact()
+            navigateTo(.settings)
+        }) {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.gray)
+                .frame(width: 24, height: 24)
+                .background(Color.black.opacity(0.8))
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .position(x: UIScreen.main.bounds.width - 30, y: 60)
+    }
+    
+    // MARK: - Music Button
+    private var musicButton: some View {
+        Button(action: {
+            print("🎵 Music Button tapped!")
+            HapticsManager.shared.lightImpact()
+            showingAmbientSoundMenu = true
+        }) {
+            Image(systemName: ambientSoundManager.isPlaying ? "speaker.wave.2.fill" : "music.note")
+                .font(.system(size: 12))
+                .foregroundColor(.gray)
+                .frame(width: 24, height: 24)
+                .background(Color.black.opacity(0.8))
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .position(x: UIScreen.main.bounds.width - 30, y: UIScreen.main.bounds.height - 100)
+    }
+    
+    // MARK: - Statistics Button
+    private var statisticsButton: some View {
+        Button(action: {
+            print("📊 Statistics Button tapped!")
+            HapticsManager.shared.lightImpact()
+            showingStatisticsSheet = true
+        }) {
+            Image(systemName: "chart.bar.fill")
+                .font(.system(size: 12))
+                .foregroundColor(.gray)
+                .frame(width: 24, height: 24)
+                .background(Color.black.opacity(0.8))
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .position(x: 30, y: UIScreen.main.bounds.height - 100)
     }
     
     // MARK: - Layout Views
     @ViewBuilder
     private func portraitLayout(geometry: GeometryProxy) -> some View {
             VStack(spacing: 0) {
-                // Completed Count View
-            CompletedCountView(
-                completedCount: viewModel.completedCountToday,
-                hourlyData: viewModel.hourlyCompletedCounts(for: Date()),
-                hourlyColors: viewModel.hourlyColorsForToday
-            )
-                    .padding(.top, 60)
-                    .padding(.horizontal, 24)
-                .onTapGesture {
-                    HapticsManager.shared.lightImpact()
-                    navigateTo(.statistics)
-                }
-                
                 Spacer()
+                .frame(height: 110) // 上部のスペースを調整
             
-            // タスク名表示
+            // タグ名表示
             VStack(spacing: 16) {
-                if !viewModel.currentTaskName.isEmpty {
-                    Text(viewModel.currentTaskName)
+                if let tag = tagManager.selectedTag {
+                    HStack(spacing: 8) {
+                        Image(systemName: tag.icon)
+                            .foregroundColor(tag.color)
+                        Text(tag.name)
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .foregroundColor(viewModel.currentTaskCategoryColor)
+                            .foregroundColor(tag.color)
+                    }
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                         .padding(.horizontal, 24)
                 } else {
-                    Text("タスクを選択してください")
+                    Text("タグを選択してください")
                         .font(.title3)
                         .fontWeight(.medium)
                         .foregroundColor(.secondary)
@@ -383,6 +340,14 @@ struct ContentView: View {
                         .lineLimit(2)
                         .padding(.horizontal, 24)
                 }
+                
+                // ポモドーロ数のドット（タグ表示の下）
+                CompletedCountView(
+                    completedCount: viewModel.completedCountToday,
+                    hourlyData: viewModel.hourlyCompletedCounts(for: Date()),
+                    hourlyColors: viewModel.hourlyColorsForToday
+                )
+                .padding(.horizontal, 24)
                 
                 // Circular Dial View
                 CircularDialView(viewModel: viewModel)
@@ -402,37 +367,49 @@ struct ContentView: View {
     @ViewBuilder
     private func landscapeLayout(geometry: GeometryProxy) -> some View {
         // 横置きレイアウト（Apple公式推奨の実装）
+        ZStack {
         HStack(spacing: 0) {
-            // 左側: ポモドーロ数のドットと統計
+            // 左側: 統計情報
             VStack(spacing: 16) {
+                Spacer()
+                
+                Spacer()
+            }
+            .frame(width: geometry.size.width * 0.22)
+            .padding(.leading, 20)
+            
+            // 中央: プログレス円とタスク名
+            HStack(spacing: 0) {
+                // 左側: ポモドーロ数のドット
+                VStack {
                 Spacer()
                 CompletedCountView(
                     completedCount: viewModel.completedCountToday,
                     hourlyData: viewModel.hourlyCompletedCounts(for: Date()),
                     hourlyColors: viewModel.hourlyColorsForToday
                 )
-                    .onTapGesture {
-                        HapticsManager.shared.lightImpact()
-                        navigateTo(.statistics)
-                    }
+                    .padding(.horizontal, 24)
                 Spacer()
             }
-            .frame(width: geometry.size.width * 0.25)
-            .padding(.leading, 20)
+                .frame(width: geometry.size.width * 0.12)
             
-            // 中央: プログレス円とタスク名
+                // 中央: タグ名表示とプログレス円
             VStack(spacing: 20) {
-                // タスク名表示
-                if !viewModel.currentTaskName.isEmpty {
-                    Text(viewModel.currentTaskName)
+                    // タグ名表示
+                    if let tag = tagManager.selectedTag {
+                        HStack(spacing: 8) {
+                            Image(systemName: tag.icon)
+                                .foregroundColor(tag.color)
+                            Text(tag.name)
                         .font(.title2)
                         .fontWeight(.semibold)
-                        .foregroundColor(viewModel.currentTaskCategoryColor)
+                                .foregroundColor(tag.color)
+                        }
                         .multilineTextAlignment(.center)
                         .lineLimit(2)
                         .padding(.horizontal, 24)
                 } else {
-                    Text("タスクを選択してください")
+                        Text("タグを選択してください")
                         .font(.title3)
                         .fontWeight(.medium)
                         .foregroundColor(.secondary)
@@ -443,7 +420,15 @@ struct ContentView: View {
                 
                 // プログレス円
                 CircularDialView(viewModel: viewModel)
-                    .frame(width: min(geometry.size.width * 0.4, geometry.size.height * 0.85), height: min(geometry.size.width * 0.4, geometry.size.height * 0.85))
+                        .frame(width: min(geometry.size.width * 0.45, geometry.size.height * 0.85), height: min(geometry.size.width * 0.45, geometry.size.height * 0.85))
+                }
+                .frame(width: geometry.size.width * 0.38)
+                
+                // 右側: 空のスペース（タイマーを中央に配置するため）
+                VStack {
+                    Spacer()
+                }
+                .frame(width: geometry.size.width * 0.12)
             }
             .frame(maxWidth: .infinity)
             
@@ -454,79 +439,72 @@ struct ContentView: View {
                 BottomControlsView(viewModel: viewModel)
                 Spacer()
             }
-            .frame(width: geometry.size.width * 0.25)
+            .frame(width: geometry.size.width * 0.22)
             .padding(.trailing, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-    
-    @ViewBuilder
-    private var taskManagerOverlay: some View {
-        Group {
-            if showingTaskManager {
-                TaskManagerOverlay(
-                    taskManager: taskManager,
-                    showingTaskManager: $showingTaskManager,
-                    taskManagerOffset: $taskManagerOffset,
-                    onTaskSelected: { task, category in
-                        viewModel.setCurrentTask(name: task.name, estimatedMinutes: task.estimatedMinutes, categoryColor: category.color)
-                        // カテゴリの色を更新
-                        viewModel.updateCurrentTaskCategoryColor(category.color)
-                        print("✅ Hiding Task Manager after task selection")
-                        showingTaskManager = false
-                        taskManagerOffset = 0
-                        print("✅ Selected task: \(task.name) from category: \(category.name)")
-                    }
-                )
-                .transition(.move(edge: .leading))
-                .onAppear {
-                    print("🔄 Task Manager Overlay - showing: \(showingTaskManager)")
-                }
+            
+            // 横置き時の4つのアイコン
+            // 左上: タスク管理
+            Button(action: {
+                print("🏷️ Tag Button tapped!")
+                HapticsManager.shared.lightImpact()
+                showingTagSelection = true
+            }) {
+                Image(systemName: "tag.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                    .frame(width: 24, height: 24)
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
             }
+            .buttonStyle(PlainButtonStyle())
+            .position(x: 30, y: 60)
+            
+            // 右上: 設定
+            Button(action: {
+                print("⚙️ Right Menu Button tapped!")
+                HapticsManager.shared.lightImpact()
+                navigateTo(.settings)
+            }) {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                    .frame(width: 24, height: 24)
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .position(x: geometry.size.width - 30, y: 60)
+            
+            // 右下: 音楽
+            Button(action: {
+                print("🎵 Music Button tapped!")
+                HapticsManager.shared.lightImpact()
+                showingAmbientSoundMenu = true
+            }) {
+                Image(systemName: ambientSoundManager.isPlaying ? "speaker.wave.2.fill" : "music.note")
+                    .font(.system(size: 12))
+                    .foregroundColor(.gray)
+                    .frame(width: 24, height: 24)
+                    .background(Color.black.opacity(0.8))
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .position(x: geometry.size.width - 30, y: geometry.size.height - 100)
+            
+
         }
     }
     
-    // MARK: - Right Menu Overlay
+    // MARK: - Right Menu Overlay (Disabled - Direct Navigation)
     @ViewBuilder
     private var rightMenuOverlay: some View {
-        Group {
-            if showingRightMenu {
-                RightMenuOverlay(
-                    onSettingsTapped: {
-                        print("⚙️ Settings tapped, hiding right menu")
-                        HapticsManager.shared.lightImpact()
-                        showingRightMenu = false
-                        rightMenuOffset = 0
-                        navigateTo(.settings)
-                    },
-                    onStatisticsTapped: {
-                        print("📊 Statistics tapped, hiding right menu")
-                        HapticsManager.shared.lightImpact()
-                        showingRightMenu = false
-                        rightMenuOffset = 0
-                        navigateTo(.statistics)
-                    },
-                    onTaskManagementTapped: {
-                        print("📋 Task Management tapped, hiding right menu")
-                        HapticsManager.shared.lightImpact()
-                        showingRightMenu = false
-                        rightMenuOffset = 0
-                        navigateTo(.taskManagement)
-                    },
-                    onClose: {
-                        print("❌ Close button tapped, hiding right menu")
-                        HapticsManager.shared.lightImpact()
-                        showingRightMenu = false
-                        rightMenuOffset = 0
-                    }
-                )
-                .offset(x: rightMenuOffset)
-                .transition(.move(edge: .trailing))
-                .onAppear {
-                    print("🔄 Right Menu Overlay - showing: \(showingRightMenu)")
-                }
-            }
-        }
+        // 右側メニューは無効化 - 直接ナビゲーションに変更
+        EmptyView()
     }
     
         private var swipeGesture: some Gesture {
@@ -534,86 +512,12 @@ struct ContentView: View {
             .onChanged { value in
                 // Apple公式推奨: onChangedでは視覚的フィードバックのみ
                 // ドラッグ中のオフセット値を更新（状態変更なし）
-                print("🔄 Swipe onChanged - translation: \(value.translation.width), showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
-                
-                if value.translation.width > 0 {
-                    // 右から左へのドラッグ（右側メニューを閉じる）
-                    if showingRightMenu {
-                        rightMenuOffset = value.translation.width
-                    } else {
-                        taskManagerOffset = value.translation.width
-                    }
-                } else if value.translation.width < 0 {
-                    // 左から右へのドラッグ（左側メニューを閉じる）
-                    if showingTaskManager {
-                        taskManagerOffset = abs(value.translation.width)
-                    } else {
-                        rightMenuOffset = abs(value.translation.width)
-                    }
-                }
+                // スワイプジェスチャーは無効化
             }
             .onEnded { value in
                 // Apple公式推奨: onEndedで実際の状態変更
                 print("🎯 Swipe onEnded - translation: \(value.translation.width), threshold: 100")
-                print("📊 Before state - showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
-                
-                if value.translation.width > 100 {
-                    // 右から左へのスワイプ
-                    if showingRightMenu {
-                        // 右側メニューを閉じる
-                        print("✅ Closing Right Menu (right-to-left swipe)")
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            HapticsManager.shared.lightImpact()
-                            showingRightMenu = false
-                            rightMenuOffset = 0
-                        }
-                    } else if !showingRightMenu {
-                        // 左から右へのスワイプでタスク管理を表示
-                        print("✅ Showing Task Manager (left swipe)")
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            HapticsManager.shared.lightImpact()
-                            showingTaskManager = true
-                            taskManagerOffset = 0
-                            // 右側メニューを確実に非表示
-                            showingRightMenu = false
-                            rightMenuOffset = 0
-                        }
-                    }
-                } else if value.translation.width < -100 {
-                    // 左から右へのスワイプ
-                    if showingTaskManager {
-                        // 左側メニューを閉じる
-                        print("✅ Closing Task Manager (left-to-right swipe)")
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            HapticsManager.shared.lightImpact()
-                            showingTaskManager = false
-                            taskManagerOffset = 0
-                        }
-                    } else if !showingTaskManager {
-                        // 右から左へのスワイプで右側メニューを表示
-                        print("✅ Showing Right Menu (right swipe)")
-                        withAnimation(.easeOut(duration: 0.3)) {
-                            HapticsManager.shared.lightImpact()
-                            showingRightMenu = true
-                            rightMenuOffset = 0
-                            // タスク管理を確実に非表示
-                            showingTaskManager = false
-                            taskManagerOffset = 0
-                        }
-                    }
-                } else {
-                    // スワイプが不十分な場合は非表示
-                    print("❌ Insufficient swipe, hiding both menus")
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        HapticsManager.shared.lightImpact()
-                        showingTaskManager = false
-                        taskManagerOffset = 0
-                        showingRightMenu = false
-                        rightMenuOffset = 0
-                    }
-                }
-                
-                print("📊 After state - showingTaskManager: \(showingTaskManager), showingRightMenu: \(showingRightMenu)")
+                // スワイプジェスチャーは無効化
             }
     }
     
@@ -621,14 +525,20 @@ struct ContentView: View {
     @ViewBuilder
     private var landscapeOverlay: some View {
         // 縦横置き時ともにオーバーレイを表示
+        ZStack {
+            // 左側: タグ管理（無効化）
         HStack {
-            // 左側: タスク管理メニュー
-            taskManagerOverlay
-            
+                EmptyView()
             Spacer()
+            }
             
             // 右側: 右側メニュー
+            HStack {
+                Spacer()
             rightMenuOverlay
+            }
+            
+
         }
     }
 }
@@ -706,356 +616,7 @@ struct CompletedCountView: View {
     }
 }
 
-// MARK: - Task Manager Overlay
-struct TaskManagerOverlay: View {
-    @ObservedObject var taskManager: TaskManager
-    @Binding var showingTaskManager: Bool
-    @Binding var taskManagerOffset: CGFloat
-    let onTaskSelected: (TaskItem, TaskCategory) -> Void
-    
-    @State private var selectedCategory: TaskCategory?
-    @State private var selectedTask: TaskItem?
-    @State private var showingAddTask = false
-    @State private var showingEditTask = false
-    @State private var taskToEdit: TaskItem?
-    
-    var body: some View {
-        GeometryReader { geometry in
-            HStack(spacing: 0) {
-                // メインコンテンツ
-                VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        Text("タスク管理")
-                            .title2Style()
-                            .primaryText()
-                        
-                        Spacer()
-                        
-                        Button(action: {
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                showingTaskManager = false
-                            }
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(DesignSystem.Colors.secondary)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 20)
-                    .padding(.bottom, 16)
-                    
-                    // コンテンツ (CategoryListView or TaskListView)
-                    if let selectedCategory = selectedCategory {
-                        TaskListView(
-                            taskManager: taskManager,
-                            category: selectedCategory,
-                            onTaskSelected: { task, category in
-                                onTaskSelected(task, category)
-                            },
-                            onBackToCategories: {
-                                self.selectedCategory = nil
-                            },
-                            onAddTask: {
-                                showingAddTask = true
-                            },
-                            onEditTask: { task in
-                                taskToEdit = task
-                                showingEditTask = true
-                            }
-                        )
-                    } else {
-                        // カテゴリリストを動的に変更
-                        VStack(spacing: 16) {
-                            ForEach(taskManager.categories, id: \.id) { category in
-                                CategoryCard(
-                                    category: category,
-                                    onTap: {
-                                        withAnimation(.easeInOut(duration: 0.3)) {
-                                            selectedCategory = category
-                                        }
-                                    }
-                                )
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.top, 20)
-                    }
-                    
-                    Spacer()
-                }
-                .frame(width: geometry.size.width * 0.8)
-                .background(DesignSystem.Colors.background)
-                .cornerRadius(DesignSystem.Layout.cornerRadius)
-                .shadow(radius: 10)
-                .offset(x: taskManagerOffset)
-                .gesture(
-                    DragGesture()
-                        .onChanged { value in
-                            if value.translation.width < 0 {
-                                taskManagerOffset = value.translation.width
-                            }
-                        }
-                        .onEnded { value in
-                            if value.translation.width < -geometry.size.width * 0.3 {
-                                withAnimation(.easeOut(duration: 0.3)) {
-                                    HapticsManager.shared.lightImpact()
-                                    showingTaskManager = false
-                                    taskManagerOffset = 0
-                                }
-                            } else {
-                                withAnimation(.easeOut(duration: 0.3)) {
-                                    taskManagerOffset = 0
-                                }
-                            }
-                        }
-                )
-                Spacer()
-            }
-        }
-        .sheet(isPresented: $showingAddTask) {
-            if let selectedCategory = selectedCategory {
-                AddTaskView(
-                    taskManager: taskManager,
-                    category: selectedCategory,
-                    isPresented: $showingAddTask
-                )
-            }
-        }
-        .sheet(isPresented: $showingEditTask) {
-            if let taskToEdit = taskToEdit, let selectedCategory = selectedCategory {
-                EditTaskView(
-                    taskManager: taskManager,
-                    task: taskToEdit,
-                    category: selectedCategory,
-                    isPresented: $showingEditTask
-                )
-            }
-        }
-    }
-}
 
-// MARK: - Category List View
-struct CategoryListView: View {
-    let categories: [TaskCategory]
-    let onCategorySelected: (TaskCategory) -> Void
-    
-    var body: some View {
-        VStack(spacing: 16) {
-            ForEach(categories, id: \.id) { category in
-                CategoryCard(
-                    category: category,
-                    onTap: {
-                        onCategorySelected(category)
-                    }
-                )
-            }
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 20)
-    }
-}
-
-// MARK: - Category Card
-struct CategoryCard: View {
-    let category: TaskCategory
-    let onTap: () -> Void
-    
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 16) {
-                Image(systemName: category.icon)
-                    .font(.title2)
-                    .foregroundColor(category.color)
-                    .frame(width: 40, height: 40)
-                    .background(category.color.opacity(0.2))
-                    .clipShape(Circle())
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(category.name)
-                        .headlineStyle()
-                        .primaryText()
-                    
-                    Text("\(category.tasks.count)個のタスク")
-                        .captionStyle()
-                        .secondaryText()
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(Color.white.opacity(0.5))
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(Color.white.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// MARK: - Task List View
-struct TaskListView: View {
-    @ObservedObject var taskManager: TaskManager
-    let category: TaskCategory
-    let onTaskSelected: (TaskItem, TaskCategory) -> Void
-    let onBackToCategories: () -> Void
-    let onAddTask: () -> Void
-    let onEditTask: (TaskItem) -> Void
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Header with back button and add button
-            HStack {
-                Button(action: {
-                    onBackToCategories()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "chevron.left")
-                            .font(.subheadline)
-                        Text(category.name)
-                            .headlineStyle()
-                    }
-                    .foregroundColor(DesignSystem.Colors.neonBlue)
-                }
-                
-                Spacer()
-                
-                Button(action: {
-                    onAddTask()
-                }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(DesignSystem.Colors.neonBlue)
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 20)
-            .padding(.bottom, 16)
-            
-            // Task list
-            ScrollView {
-                VStack(spacing: 12) {
-                    ForEach(taskManager.categories.first(where: { $0.id == category.id })?.tasks ?? [], id: \.id) { task in
-                        TaskCard(
-                            task: task,
-                            onTap: {
-                                onTaskSelected(task, category)
-                            },
-                            onEdit: {
-                                onEditTask(task)
-                            },
-                            onDelete: {
-                                taskManager.deleteTask(task.id, from: category.id)
-                            },
-                            onToggleCompletion: {
-                                taskManager.toggleTaskCompletion(task.id, in: category.id)
-                            }
-                        )
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 20)
-            }
-        }
-    }
-}
-
-// MARK: - Task Card
-struct TaskCard: View {
-    let task: TaskItem
-    let onTap: () -> Void
-    let onEdit: (() -> Void)?
-    let onDelete: (() -> Void)?
-    let onToggleCompletion: (() -> Void)?
-    
-    init(task: TaskItem, onTap: @escaping () -> Void, onEdit: (() -> Void)? = nil, onDelete: (() -> Void)? = nil, onToggleCompletion: (() -> Void)? = nil) {
-        self.task = task
-        self.onTap = onTap
-        self.onEdit = onEdit
-        self.onDelete = onDelete
-        self.onToggleCompletion = onToggleCompletion
-    }
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            // 完了チェックボックス
-            if let onToggleCompletion = onToggleCompletion {
-                Button(action: onToggleCompletion) {
-                    Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
-                        .font(.title3)
-                        .foregroundColor(task.isCompleted ? .green : .gray)
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            
-            // タスク情報
-        Button(action: onTap) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(task.name)
-                        .headlineStyle()
-                        .primaryText()
-                            .strikethrough(task.isCompleted)
-                            .opacity(task.isCompleted ? 0.6 : 1.0)
-                    
-                    Text(task.description)
-                        .subheadlineStyle()
-                        .secondaryText()
-                            .opacity(task.isCompleted ? 0.6 : 1.0)
-                    
-                    HStack(spacing: 12) {
-                        Label("\(task.estimatedMinutes)分", systemImage: "clock")
-                            .captionStyle()
-                            .secondaryText()
-                        
-                        Label(task.priority.rawValue, systemImage: "flag.fill")
-                            .captionStyle()
-                            .foregroundColor(task.priority.color)
-                    }
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(Color.white.opacity(0.5))
-                }
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            // 編集・削除ボタン
-            if onEdit != nil || onDelete != nil {
-                HStack(spacing: 8) {
-                    if let onEdit = onEdit {
-                        Button(action: onEdit) {
-                            Image(systemName: "pencil")
-                                .font(.caption)
-                                .foregroundColor(.blue)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                    
-                    if let onDelete = onDelete {
-                        Button(action: onDelete) {
-                            Image(systemName: "trash")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
-                        .buttonStyle(PlainButtonStyle())
-                    }
-                }
-            }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-        .background(Color.white.opacity(task.isCompleted ? 0.02 : 0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-}
 
 // MARK: - Break Sheet View
 struct BreakSheetView: View {
@@ -1263,3 +824,4 @@ struct RoundedCorner: Shape {
 #Preview {
     ContentView()
 }
+
